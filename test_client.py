@@ -1,44 +1,38 @@
 '''
 This is a test program to act as server for basic requests
 
-server (this device):
-Client: don't care
+server LOCAL HOST
+Client: (this device)
 
 
-This device sits and waits to be contacted.  it then fires off a basic response which will
-grow
-
+This device contacts the server.  It does this periodically and ad-hoc (user input)
+It can contact to provide the server some information or it can contact to just receice info
 '''
 
 import socket
+import threading
+import json
 
 HOST='localhost'
 PORT=54321
 
-def main():
-	print('calling server')
-	print(request_state())
-	print('exiting')
 
-def request_state():
+
+def request_state(id):
 	"""
-	request_pic:
-	1) initiates a socket connection with the pi_cam host
-	2) waits and recieves RGB array data back from host
-	3) converts to jpg formt
-	4) writes to a date/time stamped file
-	5) returns the file name
-	
-	returns: (string) filename 
+	just requests the server provide the current game state
 	"""
+	data={"id":id,"comm":0}
+	print("Data to send: {data}".format(data=repr(data)))
 	
 	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
 		
 		#ask for a picture from the server
 		print("Initiating connection")
 		s.connect((HOST,PORT))
-		s.sendall(b'Please Send me the state')
-		
+		print(json.dumps(data))
+		s.sendall(bytearray(json.dumps(data),'utf-8'))
+		#bytearray(repr(data),'utf-8')
 		#once we connect, recieve the response until connection is closed
 		data=0
 		data=s.recv(1024)	#our buffer is 1024 bytes
@@ -50,7 +44,8 @@ def request_state():
 			if not tdata: break	#if there's nothing here, break out
 			data+=tdata
 			i+=1
-		print("State %d received"%i)
+		#print("State %d received"%i)
+		print("Date recived: ", data.decode())
 		
 		
 		
@@ -59,5 +54,25 @@ def request_state():
 	#return the file name
 	return data
 	
+
+def main():
+	all_threads=[]
+	id=10
+	try:
+		for i in range(1,2):
+			print ("request: ",i)
+			t=threading.Thread(target=request_state, args=([id]))
+			print ("starting")
+			t.start()
+			all_threads.append(t)
+			id+=1
+			print('exiting')
+	except KeyboardInterrupt:
+		print("CTRL+C")
+	finally:
+		print("Close it out")
+		for t in all_threads:
+			t.join()
+		
 if __name__=="__main__":
 	main()
