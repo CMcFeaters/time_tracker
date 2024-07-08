@@ -9,7 +9,6 @@ from dotenv import dotenv_values
 
 config=dotenv_values(".env")	#laod the envinronment variabls
 engine=create_engine("mariadb+mariadbconnector://%s:%s@127.0.0.1:%s/%s"%(config['uname'],config['pw'],config['port'],config['db']))	#create the engine for connection
-
 Base=declarative_base()
 
 class Games(Base):
@@ -17,21 +16,21 @@ class Games(Base):
 	#keys
 	GameID: Mapped[int]=mapped_column(primary_key=True)
 	#data
-	GamePhase: Mapped[str]=mapped_column(String(30))
-	GameRound: Mapped[int]
+	GamePhase: Mapped[str]=mapped_column(String(30), default="setup")
+	GameRound: Mapped[int]=mapped_column(default=0)
 	GameDate: Mapped[datetime.date]
 	#relationship
 	GameFactions: Mapped[List["Factions"]]=relationship(back_populates="GamePlayed")
-	GameEvents: Mapped[List["Events"]]=relationship(back_populates="GameID")	
+	GameEvents: Mapped[List["Events"]]=relationship(back_populates="Game")	
 	
 class Users(Base):
 	__tablename__="users"
 	#keys
 	UserID: Mapped[int]=mapped_column(primary_key=True)
 	#data
-	UserName: Mapped[str]=mapped_column(String(30))
+	UserName: Mapped[str]=mapped_column(String(30), unique=True)
 	#relationships
-	FactionsPlayed: Mapped[List["Factions"]]=relationship(back_populates="FactionName")
+	FactionsPlayed: Mapped[List["Factions"]]=relationship(back_populates="User")
 	
 
 class Factions(Base):
@@ -41,11 +40,11 @@ class Factions(Base):
 	GameID: Mapped[int] = mapped_column(ForeignKey("games.GameID"))
 	UserID: Mapped[int] = mapped_column(ForeignKey("users.UserID"))
 	#data
-	Active: Mapped[bool]
-	TableOrder: Mapped[int]
-	Speaker: Mapped[bool]
-	Initiative: Mapped[int]
-	TotalTime: Mapped[datetime.timedelta] 
+	Active: Mapped[bool] =mapped_column(default=0)
+	TableOrder: Mapped[int] =mapped_column(default=0)
+	Speaker: Mapped[bool] =mapped_column(default=0)
+	Initiative: Mapped[int] =mapped_column(default=0)
+	TotalTime: Mapped[datetime.time] =mapped_column(default=datetime.timedelta(seconds=0))
 	#relationships
 	GamePlayed: Mapped["Games"]=relationship(back_populates="GameFactions")
 	User: Mapped["Users"]=relationship(back_populates="FactionsPlayed")
@@ -81,7 +80,8 @@ class Events(Base):
 		Speaker - FactionName
 	'''
 
-Base.metadata.drop_all(engine)
-Base.metadata.create_all(engine)
+if __name__=="__main__":
+	Base.metadata.drop_all(engine)
+	Base.metadata.create_all(engine)
 	
 
