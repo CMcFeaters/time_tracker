@@ -16,7 +16,7 @@ class Games(Base):
 	#keys
 	GameID: Mapped[int]=mapped_column(primary_key=True)
 	#data
-	GamePhase: Mapped[str]=mapped_column(String(30), default="setup")
+	GamePhase: Mapped[str]=mapped_column(String(30), default="Setup")
 	GameRound: Mapped[int]=mapped_column(default=0)
 	GameDate: Mapped[datetime.date]
 	#relationship
@@ -45,6 +45,8 @@ class Factions(Base):
 	Speaker: Mapped[bool] =mapped_column(default=0)
 	Initiative: Mapped[int] =mapped_column(default=0)
 	TotalTime: Mapped[datetime.time] =mapped_column(default=datetime.timedelta(seconds=0))
+	Pass: Mapped[bool]=mapped_column(default=0)
+	Score: Mapped[int]=mapped_column(default=0)
 	#relationships
 	GamePlayed: Mapped["Games"]=relationship(back_populates="GameFactions")
 	User: Mapped["Users"]=relationship(back_populates="FactionsPlayed")
@@ -55,17 +57,19 @@ class Factions(Base):
 class Events(Base):
 	__tablename__="events"
 	#keys
-	EventTime: Mapped[datetime.datetime] = mapped_column(insert_default=datetime.datetime.now())
+	EventID: Mapped[int] = mapped_column(primary_key=True)
 	GameID: Mapped[int] = mapped_column(ForeignKey("games.GameID"))
 	FactionName: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
 	#data
+	EventTime: Mapped[datetime.datetime] = mapped_column(insert_default=datetime.datetime.now())
 	EventType: Mapped[str]=mapped_column(String(30))
 	MiscData: Mapped[Optional[int]]
+	PhaseData: Mapped[Optional[str]]=mapped_column(String(30))
 	#relationships
 	Game: Mapped["Games"]=relationship(back_populates="GameEvents")
 	Faction: Mapped["Factions"]=relationship(back_populates="FactionActions")
 	#constraints
-	PrimaryKeyConstraint(EventTime,GameID,name="pk_Events")
+	#PrimaryKeyConstraint(EventID,GameID,name="pk_Events")
 	'''
 	EventTypes:
 		StartGame
@@ -75,13 +79,15 @@ class Events(Base):
 		Start_Turn - FactionName
 		End_Turn - FactionName
 		Pass_Turn - FactionName
-		StartPhase - MiscData (strategy, action, status, agenda)
-		EndPhase - MiscData (strategy, action, status, agenda)
+		StartPhase - PhaseData (setup, strategy, action, status, agenda)
+		EndPhase - PhaseData (setup, strategy, action, status, agenda)
 		Speaker - FactionName
+		Initiative - FactionName - MiscData (init number)
 	'''
-
-if __name__=="__main__":
+def createNew():
 	Base.metadata.drop_all(engine)
 	Base.metadata.create_all(engine)
 	
+if __name__=="__main__":
+	createNew()
 
