@@ -1,9 +1,10 @@
 #used for testing the tables and various functions prior to putting it in the page
 from TI_TimeTracker_DB_api import engine, Games, Users, Factions, Events, createNew
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.orm import sessionmaker
 import datetime as dt
 import bisect
+from time import sleep
 
 gdate=dt.date.today().strftime("%Y%m%d")
 UF_Dict={"Hythem":("Yssaril Tribes",2),"Charlie":("VuilRaith Cabal",1), "GRRN":("Nekro Virus",4), "Jakers":("Council Keleres",3),
@@ -223,13 +224,26 @@ def endTurn(GID,faction,fPass):
 		#find the next faction
 		session.commit()
 	nextFaction=findNext(GID)
-	#updateTime(faction)	#updates total time with most recent turn
+	updateTime(GID,faction)	#updates total time with most recent turn
 	
 	if nextFaction=="none":
 		#print("Ending phase due to no players left")
 		endPhase(GID,False)
 	else:
 		startTurn(GID,nextFaction)
+
+def updateTime(GID,faction):
+	'''
+	finds the time delta and applies it to the factions total time
+	'''
+	with Session() as session:
+		turns=session.scalars(select(Events).where(Events.FactionName==faction,or_(Events.EventType=="StartTurn",Events.EventType=="EndTurn",Events.EventType=="PassTurn")).order_by(Events.EventID)).all()
+		turnTime=turns[len(turns)-1].EventTime-turns[len(turns)-2].EventTime	#subtract the last and second to last (lazy but i'm on a fucking schedule)
+		print("%s turn time: %s"%(faction,turnTime))
+		actFact=session.scalars(select(Factions).where(Factions.FactionName==faction)).first()
+		actFact.TotalTime+=turnTime
+		session.commit()
+		
 
 def findNext(GID):
 	'''
@@ -249,7 +263,10 @@ def findNext(GID):
 			currentFaction=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==True)).first()
 			#use current faction to find the next faction
 			print(activeInitiatives)
-			nextIndex=bisect.bisect_left(activeInitiatives,currentFaction.Initiative)%len(activeInitiatives)
+			if activeInitiatives.count(currentFaction.Initiative)>0:
+				nextIndex=(activeInitiatives.index(currentFaction.Initiative)+1)%len(activeInitiatives)
+			else:
+				nextIndex=bisect.bisect_left(activeInitiatives,currentFaction.Initiative)%len(activeInitiatives)
 			#nextIndex=(activeInitiatives.index(currentFaction.Initiative)+1)%len(activeInitiatives)
 			nextFaction=activeFactions[nextIndex].FactionName #get teh name to return
 			currentFaction.Active=False
@@ -259,12 +276,6 @@ def findNext(GID):
 			
 			
 			#clear and update actives
-def updateTime(GID,faction):
-	'''
-	given a faction and GAME ID, find the length of time of the most recent turn
-	requires a closed end to turn, let's assume this is true for now
-	'''
-	pass
 	
 #start adding functionality
 #port over to flask front end
@@ -272,6 +283,7 @@ def updateTime(GID,faction):
 def turnHelper(GID,passer):
 	with Session() as session:
 		activeFact=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==True)).first().FactionName
+		sleep(1)
 		endTurn(GID,activeFact,passer)
 
 def restart(GID):
@@ -306,7 +318,7 @@ print("cycle phase 1")
 print("Starting turns")
 for i in range(0,10):
 	turnHelper(GID,0)
-	print("Ending turn %s"%i)
+	print("Ending turn %s at %s"%(i,dt.datetime.now()))
 
 print("StartingPasses")
 for i in range(0,6):

@@ -1,9 +1,10 @@
 
 import datetime
 from typing import Optional, List
-from sqlalchemy import String, ForeignKey, create_engine
+from sqlalchemy import String, ForeignKey, create_engine, DateTime
 from sqlalchemy.orm import declarative_base, relationship, mapped_column, Mapped
 from sqlalchemy.schema import PrimaryKeyConstraint
+from sqlalchemy.sql import func
 from dotenv import dotenv_values
 #define the MARIADB engine
 
@@ -44,7 +45,7 @@ class Factions(Base):
 	TableOrder: Mapped[int] =mapped_column(default=0)
 	Speaker: Mapped[bool] =mapped_column(default=0)
 	Initiative: Mapped[int] =mapped_column(default=0)
-	TotalTime: Mapped[datetime.time] =mapped_column(default=datetime.timedelta(seconds=0))
+	TotalTime: Mapped[datetime.timedelta] =mapped_column(default=datetime.timedelta(seconds=0))
 	Pass: Mapped[bool]=mapped_column(default=0)
 	Score: Mapped[int]=mapped_column(default=0)
 	#relationships
@@ -61,7 +62,7 @@ class Events(Base):
 	GameID: Mapped[int] = mapped_column(ForeignKey("games.GameID"))
 	FactionName: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
 	#data
-	EventTime: Mapped[datetime.datetime] = mapped_column(insert_default=datetime.datetime.now())
+	EventTime: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())
 	EventType: Mapped[str]=mapped_column(String(30))
 	MiscData: Mapped[Optional[int]]
 	PhaseData: Mapped[Optional[str]]=mapped_column(String(30))
