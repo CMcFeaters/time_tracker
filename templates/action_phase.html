@@ -7,11 +7,17 @@
   <form class="form-inline" method="POST" action="{{url_for('action_phase')}}">
 	<div class="form-group">
 		<div class="input-group">
-		<span>Initiative {{ faction.Initiative }}: {{ faction.FactionName }} - Score: {{ faction.Score }}</span>
+		<span>Initiative {{ faction.Initiative }}: {{ faction.FactionName }} - Score: {{ faction.Score }} - total time {{faction.TotalTime}}</span>
 		{% if faction.Speaker %}
 		<span> - SPEAKER </span>
 		{% else %}
 		<button type="submit" name="{{faction.FactionName}}" value="speaker" class="btn btn-default">Make Speaker</button>
+		{% endif %}
+		
+		{% if faction.Pass %}
+		<span> - PASSED </span>
+		{% else %}
+		<span> - ACTIVE </span>
 		{% endif %}
 		</div>
 </div>

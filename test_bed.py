@@ -191,6 +191,12 @@ def endPhase(GID,gameover):
 		if gameover:
 			active=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).all()
 			if len(active)>0:
+				
+				#check tos ee if we need to 'unpause'
+				lastPause=session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="Pause").order_by(Events.EventID.desc())).all()
+				if len(lastPause)>0:
+					if lastPause[0].MiscData==1:
+						session.add(Events(GameID=GID,EventType="Pause",MiscData=0))
 				active[0].Active=0
 				#check to see if we need to end teh active player's turn
 				turns=session.scalars(select(Events).where(Events.FactionName==active[0].FactionName,or_(Events.EventType=="StartTurn",Events.EventType=="EndTurn",Events.EventType=="PassTurn")).order_by(Events.EventID)).all()
@@ -247,8 +253,19 @@ def updateTime(GID,faction):
 	finds the time delta and applies it to the factions total time
 	'''
 	with Session() as session:
-		turns=session.scalars(select(Events).where(Events.FactionName==faction,or_(Events.EventType=="StartTurn",Events.EventType=="EndTurn",Events.EventType=="PassTurn")).order_by(Events.EventID)).all()
-		turnTime=turns[len(turns)-1].EventTime-turns[len(turns)-2].EventTime	#subtract the last and second to last (lazy but i'm on a fucking schedule)
+		turnStart=session.scalars(select(Events).where(Events.FactionName==faction,Events.EventType=="StartTurn").order_by(Events.EventID.desc())).first()	#most recent start
+		turnStop=session.scalars(select(Events).where(Events.FactionName==faction,Events.GameID==GID,or_(Events.EventType=="EndTurn",Events.EventType=="PassTurn")).order_by(Events.EventID.desc())).first() #most recent stop
+		turnTime=turnStop.EventTime-turnStart.EventTime	#subtract the last and second to last (lazy but i'm on a fucking schedule)
+		
+		#find pause
+		lastPause=session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="Pause",Events.MiscData==1).order_by(Events.EventID.desc())).all()
+		if len(lastPause)>0:
+			lastPause=lastPause[0]
+			lastUnPause=session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="Pause",Events.MiscData==0).order_by(Events.EventID.desc())).first()
+			if (lastPause.EventID>turnStart.EventID and lastPause.EventID<turnStop.EventID):
+				#there was a pause
+				pauseTime=lastUnPause.EventTime-lastPause.EventTime
+				turnTime-=pauseTime
 		print("%s turn time: %s"%(faction,turnTime))
 		actFact=session.scalars(select(Factions).where(Factions.FactionName==faction)).first()
 		actFact.TotalTime+=turnTime

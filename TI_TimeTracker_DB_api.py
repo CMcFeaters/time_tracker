@@ -91,5 +91,7 @@ def createNew():
 	Base.metadata.create_all(engine)
 	
 if __name__=="__main__":
-	createNew()
+	#createNew()
+	print ("safe mode, doing nothing")
+	
 

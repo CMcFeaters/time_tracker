@@ -1,4 +1,5 @@
-<!doctype html>
+{% extends 'base.html' %}
+{% block content %}
 <title>Agenda Phase!</title>
 <h1> Factions: </h1>
 {% for faction in factions %}
@@ -33,3 +34,4 @@
 		</div>
 	</div>
 </form>
+{% endblock %}

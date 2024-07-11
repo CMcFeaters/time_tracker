@@ -1,4 +1,5 @@
-<!doctype html>
+{% extends 'base.html' %}
+{% block content %}
 <title>Strategy Phase!</title>
 <h1> Strategy Phase </h1>
 <form class="form-inline" method="POST" action="{{url_for('strategy_phase')}}">
@@ -16,3 +17,4 @@
 <button type="submit" class="btn btn-default">SUBMIT</button>
 </div>
 </form>
+{% endblock %}
