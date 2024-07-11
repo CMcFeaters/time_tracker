@@ -7,7 +7,7 @@ import bisect
 from time import sleep
 
 gdate=dt.date.today().strftime("%Y%m%d")
-UF_Dict={"Hythem":("Yssaril Tribes",2),"Charlie":("VuilRaith Cabal",1), "GRRN":("Nekro Virus",4), "Jakers":("Council Keleres",3),
+UF_Dict={"Charlie":("VuilRaith Cabal",1), "GRRN":("Nekro Virus",4), "Jakers":("Council Keleres",3),
 		"Sunny":("Barony of Letnev",6),"Nathan":("Naaz-Rohka Alliance",5)}
 Session=sessionmaker(engine)
 GID=1	#value used to identify current cgame
@@ -321,10 +321,13 @@ def restart(GID):
 	createFactions(GID)
 
 if __name__=="__main__":
+	print("safe mode enabled")
+	'''
 	restart(GID)
 	print("restart complete")
 	gameStart(GID)
 	print("Game Start complete")
+	'''
 	'''
 	initiativeEvent(GID)
 	print("setting initiative")
