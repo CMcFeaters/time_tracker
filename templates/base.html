@@ -1,0 +1,15 @@
+<!doctype html>
+<head>
+	
+	<p style="test-align: left;">
+		<button id="pause" type="button" onclick="window.location.href='{{url_for('game_pause')}}';" class="btn btn-default">PAUSE</button>
+		<span style="float:right;">
+			<button id="end" type="button" onclick="window.location.href='{{url_for('end_game')}}';">END GAME</button>
+		</span>
+	</p>
+
+</head>
+
+<main>
+{% block content %}{% endblock content %}
+</main>

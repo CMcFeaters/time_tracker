@@ -20,6 +20,7 @@ class Games(Base):
 	GamePhase: Mapped[str]=mapped_column(String(30), default="Setup")
 	GameRound: Mapped[int]=mapped_column(default=0)
 	GameDate: Mapped[datetime.date]
+	GameWinner: Mapped[Optional[str]]=mapped_column(String(30))
 	#relationship
 	GameFactions: Mapped[List["Factions"]]=relationship(back_populates="GamePlayed")
 	GameEvents: Mapped[List["Events"]]=relationship(back_populates="Game")	

@@ -1,0 +1,35 @@
+<!doctype html>
+<title>Agenda Phase!</title>
+<h1> Factions: </h1>
+{% for faction in factions %}
+	<span>{{ faction.FactionName }} - Score: {{ faction.Score }}</span>
+	{% if faction.Speaker %}
+		<span> (SPEAKER) </span>
+	{% endif %}
+	<form class="form-inline" method="POST" action="{{url_for('agenda_phase')}}">
+		<div class="form-group">
+			<div class="input-group">
+				<button type="submit" name="{{faction.FactionName}}" value="-1" class="btn btn-default">-1 Point</button>
+				<button type="submit" name="{{faction.FactionName}}" value="1" class="btn btn-default">+1 Point</button>
+			</div>
+		</div>
+	</form>
+{% endfor %}
+<br>
+<h3> Agenda Steps </h3>
+<span> 1. First Agenda</span><br>
+<span>  	a. Reveal Agenda </span><br>
+<span>		i. "When an agenda is revealed" </span><br>
+<span>		ii. "After an agenda is revealed" </span><br>
+<span>	b. Vote (Clockewise left of speaker) </span><br>
+<span> 	c. Resolve Outcomes </span><br>
+<span> 2. Repeat for next agenda </span><br>
+<span> 3. Ready Planets</span><br>
+
+<form class="form-inline" method="POST" action="{{url_for('agenda_phase')}}">
+	<div class="form-group">
+		<div class="input-group">
+			<button type="submit" name="action" value="END" class="btn btn-default">END Agenda Phase</button>
+		</div>
+	</div>
+</form>

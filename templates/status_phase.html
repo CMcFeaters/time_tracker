@@ -1,0 +1,37 @@
+<!doctype html>
+<title>Status Phase!</title>
+<h1> Status Phase </h1>
+<b><span> 1. Score Objectives <span></b><br>
+{% for faction in factions %}
+  <span>Init - {{ faction.Initiative }}: {{ faction.FactionName }} - Score: {{ faction.Score }}</span>
+	<form class="form-inline" method="POST" action="{{url_for('status_phase')}}">
+		<div class="form-group">
+			<div class="input-group">
+				<button type="submit" name="{{faction.FactionName}}" value="-1" class="btn btn-default">-1 Point</button>
+				<button type="submit" name="{{faction.FactionName}}" value="1" class="btn btn-default">1 Point</button>
+				<button type="submit" name="{{faction.FactionName}}" value="2" class="btn btn-default">2 Points</button>
+				<button type="submit" name="{{faction.FactionName}}" value="3" class="btn btn-default">3 Points</button>
+			</div>
+		</div>
+	</form>
+	<br>
+{% endfor %}
+<b>
+<span> 2. Reveal Public Objectives <span><br>
+<span> 3. Draw Action Cards <span><br>
+<span> 4. REmove Command Tokens <span><br>
+<span> 5. Gain/Redis Command Tokens <span><br>
+<span> 6. Ready Cards <span><br>
+<span> 7. Repair Units <span><br>
+<span> 8. Return Strategy Cards <span><br>
+</b>
+
+<form class="form-inline" method="POST" action="{{url_for('status_phase')}}">
+	<div class="form-group">
+		<div class="input-group">
+			<button type="submit" name="action" value="END" class="btn btn-default">END Status Phase</button>
+		</div>
+	</div>
+</form>
+
+

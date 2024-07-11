@@ -48,9 +48,9 @@ def initiativeEvent(GID):
 			session.add(Events(GameID=GID,FactionName=row.FactionName,
 				EventType="Initiative",MiscData=i))
 			session.commit()
-		updateInitiative(initiatives,GID)
+		updateInitiative(GID,initiatives)
 
-def updateInitiative(initiative,GID):
+def updateInitiative(GID,initiative):
 	'''
 	takes in a dict of initiatives in order of {"faction name":"initiative"} and updates
 	can do single or batch
@@ -61,7 +61,7 @@ def updateInitiative(initiative,GID):
 			where(Factions.FactionName==key,Factions.GameID==GID)).first().Initiative=initiative[key]
 		session.commit()
 
-def pauseEvent(pup,GID):
+def pauseEvent(GID,pup):
 	'''
 	initiates a pause event with the state of bool pup
 	'''
@@ -69,7 +69,7 @@ def pauseEvent(pup,GID):
 		session.add(Events(GameID=GID, EventType="Pause", MiscData=pup))
 		session.commit()
 
-def newSpeaker(faction,GID):
+def newSpeaker(GID,faction):
 	'''
 	removes current speaker and assigns the given faction the speaker priority
 	'''
@@ -85,7 +85,7 @@ def newSpeaker(faction,GID):
 		res.Speaker=True
 		session.commit()
 		
-def adjustPoints(faction,points,GID):
+def adjustPoints(GID,faction,points):
 	'''
 	adjusts the points for a faction by "points".  Can be positive or negative, creates event and then updates the scores
 	'''
@@ -105,12 +105,13 @@ def gameStart(GID):
 	#move into the strat phase
 	startPhase(GID)
 		
-def gameStop(GID):
+def gameStop(GID,faction):
 	'''
 	ends the game by creating a stop game event
 	'''
 	endPhase(GID,True)
 	with Session() as session:
+		session.scalars(select(Games).where(Games.GameID==GID)).first().GameWinner=faction
 		session.add(Events(GameID=GID,EventType="GameStop"))
 		session.commit()
 	
@@ -171,6 +172,7 @@ def phaseChangeDetails(GID,newPhase):
 			factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
 			for row in factions:
 				row.Pass=0 #set all pass status to 0
+				row.Active=0	#set all to inactive
 			
 		session.commit()
 			
@@ -187,6 +189,14 @@ def endPhase(GID,gameover):
 		
 		#if we are ending the game, we don't want to call "startPhase"
 		if gameover:
+			active=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).all()
+			if len(active)>0:
+				active[0].Active=0
+				#check to see if we need to end teh active player's turn
+				turns=session.scalars(select(Events).where(Events.FactionName==active[0].FactionName,or_(Events.EventType=="StartTurn",Events.EventType=="EndTurn",Events.EventType=="PassTurn")).order_by(Events.EventID)).all()
+				if turns[len(turns)-1].EventType=="StartTurn":
+					session.scalars(select(Factions).where(Factions.FactionName==active[0].FactionName)).first().Pass=True
+					session.add(Events(GameID=GID,EventType="PassTurn",FactionName=active[0].FactionName))
 			currentGame.GamePhase="Completed"
 		session.commit()
 	
@@ -298,6 +308,7 @@ if __name__=="__main__":
 	print("restart complete")
 	gameStart(GID)
 	print("Game Start complete")
+	'''
 	initiativeEvent(GID)
 	print("setting initiative")
 	pauseEvent(True,GID)
@@ -342,4 +353,5 @@ if __name__=="__main__":
 	print("cycle phase 8")
 	gameStop(GID)
 	print("Game Over")
+	'''
 

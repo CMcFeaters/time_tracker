@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<title>Action Phase!</title>
+<h1> Action Phase </h1>
+{% for faction in factions %}
+  
+  <form class="form-inline" method="POST" action="{{url_for('action_phase')}}">
+	<div class="form-group">
+		<div class="input-group">
+		<span>Initiative {{ faction.Initiative }}: {{ faction.FactionName }} - Score: {{ faction.Score }}</span>
+		{% if faction.Speaker %}
+		<span> - SPEAKER </span>
+		{% else %}
+		<button type="submit" name="{{faction.FactionName}}" value="speaker" class="btn btn-default">Make Speaker</button>
+		{% endif %}
+		</div>
+</div>
+</form>
+{% endfor %}
+<form class="form-inline" method="POST" action="{{url_for('action_phase')}}">
+<div class="form-group">
+	<div class="input-group">
+	<h1> Active Faction: {{activeFaction.FactionName}} </h1>
+	<button type="submit" name="action" value="score" class="btn btn-default">Score Point</button>
+	<button type="submit" name="action" value="end" class="btn btn-default">End Turn</button>
+	<button type="submit" name="action" value="pass" class="btn btn-default">Pass Turn</button>
+	</div>
+</div>
+</form>
+{% endblock content %}
