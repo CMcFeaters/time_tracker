@@ -6,49 +6,18 @@ import datetime as dt
 import bisect
 from time import sleep
 
+#modify when we create games
 gdate=dt.date.today().strftime("%Y%m%d")
-UF_Dict={"Charlie":("VuilRaith Cabal",1), "GRRN":("Nekro Virus",4), "Jakers":("Council Keleres",3),
-		"Sunny":("Barony of Letnev",6),"Nathan":("Naaz-Rohka Alliance",5)}
+
+#delete later
+UF_Dict={"Charlie":("VuilRaith Cabal",1), "GRRN":("Nekro Virus",3), "Jakers":("Council Keleres",2),
+		"Sunny":("Barony of Letnev",5),"Nathan":("Naaz-Rohka Alliance",4)}
 Session=sessionmaker(engine)
+
+#modify 
 GID=1	#value used to identify current cgame
 
-def createGame():
-	with Session()as session:
-		newGame=Games(GameDate=gdate)
-		session.add(newGame)
-		session.commit()
-		
 
-def createUsers():
-	with Session() as session:
-		session.add(Users(UserName="Charlie"))
-		session.add(Users(UserName="Nathan"))
-		session.add(Users(UserName="Sunny"))
-		session.add(Users(UserName="GRRN"))
-		session.add(Users(UserName="Jakers"))
-		session.add(Users(UserName="Hythem"))
-		session.commit()
-		
-def createFactions(GID):
-	with Session() as session:
-		for key in UF_Dict.keys():
-			session.add(Factions(FactionName=UF_Dict[key][0], 
-			UserID=session.scalars(select(Users).where(Users.UserName==key)).first().UserID, 
-			GameID=GID,TableOrder=UF_Dict[key][1]))
-		session.commit()
-
-def initiativeEvent(GID):
-	with Session() as session:
-		res=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
-		initiatives={}
-		i=0
-		for row in res:
-			i=i+1
-			initiatives[row.FactionName]=i
-			session.add(Events(GameID=GID,FactionName=row.FactionName,
-				EventType="Initiative",MiscData=i))
-			session.commit()
-		updateInitiative(GID,initiatives)
 
 def updateInitiative(GID,initiative):
 	'''
@@ -307,11 +276,62 @@ def findNext(GID):
 #start adding functionality
 #port over to flask front end
 
+def gameStat(GID):
+	'''
+	displays the basic game stats such as time spent in each phase, number of rounds, etc
+	'''
+	with Session() as session:
+		pass
+		
+
+#####################helper functions for initial testing####################
 def turnHelper(GID,passer):
 	with Session() as session:
 		activeFact=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==True)).first().FactionName
 		sleep(1)
 		endTurn(GID,activeFact,passer)
+
+def createGame():
+	#modify when we get to creating games
+	with Session() as session:
+		newGame=Games(GameDate=gdate)
+		session.add(newGame)
+		session.commit()
+		
+
+def createUsers():
+	#modify when we create a new user (deprecate)
+	with Session() as session:
+		session.add(Users(UserName="Charlie"))
+		session.add(Users(UserName="Nathan"))
+		session.add(Users(UserName="Sunny"))
+		session.add(Users(UserName="GRRN"))
+		session.add(Users(UserName="Jakers"))
+		session.add(Users(UserName="Hythem"))
+		session.commit()
+		
+def createFactions(GID):
+	#modify when adding create factions for a game (deprecate)
+	with Session() as session:
+		for key in UF_Dict.keys():
+			session.add(Factions(FactionName=UF_Dict[key][0], 
+			UserID=session.scalars(select(Users).where(Users.UserName==key)).first().UserID, 
+			GameID=GID,TableOrder=UF_Dict[key][1]))
+		session.commit()
+
+def initiativeEvent(GID):
+	#used for starting initiatives (deprecate)
+	with Session() as session:
+		res=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
+		initiatives={}
+		i=0
+		for row in res:
+			i=i+1
+			initiatives[row.FactionName]=i
+			session.add(Events(GameID=GID,FactionName=row.FactionName,
+				EventType="Initiative",MiscData=i))
+			session.commit()
+		updateInitiative(GID,initiatives)
 
 def restart(GID):
 	createNew()
@@ -322,12 +342,11 @@ def restart(GID):
 
 if __name__=="__main__":
 	print("safe mode enabled")
-	'''
-	restart(GID)
-	print("restart complete")
-	gameStart(GID)
-	print("Game Start complete")
-	'''
+
+	#restart(GID)
+	#print("restart complete")
+	#gameStart(GID)
+
 	'''
 	initiativeEvent(GID)
 	print("setting initiative")

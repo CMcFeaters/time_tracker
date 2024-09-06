@@ -1,18 +1,19 @@
 from flask import Flask, render_template, redirect, url_for,request
-from test_bed import Session, updateInitiative, endPhase, adjustPoints, endTurn, newSpeaker, pauseEvent, gameStop
+from server_api import Session, updateInitiative, endPhase, adjustPoints, endTurn, newSpeaker, pauseEvent, gameStop
 from sqlalchemy import select, and_
 from TI_TimeTracker_DB_api import Games, Users, Factions, Events
 
 #config=dotenv_values(".env")
 
 app = Flask(__name__)
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 #app.config["SQLALCHEMY_DATABSE_URI"]="mariadb+mariadbconnector://%s:%s@127.0.0.1:%s/%s"%(config['uname'],config['pw'],config['port'],config['db'])
 
 GID=1
 
 @app.route("/")
 def phase_selector():
-	#redirects to the appropriate phase
+	#this reads the current game phase and redirects the user to the representative page
 	with Session() as session:
 		phase=session.scalars(select(Games.GamePhase).where(Games.GameID==GID)).first()
 		if phase=="Setup":
@@ -31,8 +32,39 @@ def phase_selector():
 			return redirect(url_for('error_phase'))
 
 
+@app.route('/welcome')
+def welcome_page():
+	'''
+	this page displays a welcome screen for users allowing them to select an active game, view stats, or create a game
+	-view game stats
+	-view all time stats
+	-view faction stats
+	-view player stats
+	Show recent 10 games with view option
+	Show recent 10 players with view option
+	Create new game option
+	Create new player option
+	
+	
+	'''
+	with Session() as session:
+		games=session.scalars(select(Games).order_by(Games.GameID).limit(10)).all()
+@app.route('/viewGame')
+def viewGame_page(GID):
+	'''
+	a page where users view the status of a single game
+	this will pump out all the relevant stats we want to see
+	'''
+	pass
+
 @app.route('/pause', methods=['GET','POST'])
 def game_pause():
+	#pause page, underlying code creates a pause event
+	#page allows users to unpause or go through the end-game cycle
+	'''
+		NOTE: may want to add a "pause" state somewhere in the db  rather than just having it as
+		an event so that it has some resiliency 
+	'''
 	if request.method=="POST":
 		pauseEvent(GID,0)
 		return phase_selector()

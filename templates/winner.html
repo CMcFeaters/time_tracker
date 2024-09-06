@@ -3,7 +3,6 @@
 <title>Congratulations</title>
 <h1> Congratulations {{user.UserName}}</h1>
 <span> {{ winningFaction.FactionName }} - Score: {{ winningFaction.Score }} - Total Time (s): {{winningFaction.TotalTime}}</span>
-
 <h2> Skill Issues </h2>
 {% for faction in factions %}
 	<span>{{ faction.FactionName }} - Score: {{ faction.Score }} - Total Time: {{faction.TotalTime}}</span><br>
