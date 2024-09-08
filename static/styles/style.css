@@ -1,4 +1,51 @@
-h2,
-p {
-  color: blue;
+/*
+items used for the page header section
+*/
+.buttonPause {
+	width: 100px;
+	height: 100px;
+}
+
+.buttonEnd{
+	width:100px;
+	height:100px;
+}
+
+.title_box{
+	display: flex;
+	flex-wrap:wrap;
+	width:100%;
+	height:100px;
+	flex-direction:column;
+	align-items :flex-start;
+	justify-items:flex-start;
+}
+.title_box .pause{
+	align-self: flex-start;
+}	
+.title_box .end{
+	align-self:flex-end;
+}
+/*box used for alignment of winner screen*/
+.win_box{
+	display: flex;
+	width:100%;
+	flex-direction:row;
+	align-items :center;
+	justify-content: center;
+}
+
+.win_box div{
+	width:33%;
+}
+
+/*box used for each action phase entry/row*/
+.action_box{
+	display: flex;
+	flex-wrap:wrap;
+	width:100%;
+	height:100px;
+	flex-direction:column;
+	align-items :flex-start;
+	justify-items:flex-start;
 }
