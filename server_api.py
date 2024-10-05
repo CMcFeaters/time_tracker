@@ -1,10 +1,13 @@
-#used for testing the tables and various functions prior to putting it in the page
-from TI_TimeTracker_DB_api import engine, Games, Users, Factions, Events, createNew
+'''
+"backend" interface for teh server.  Includes all the functions called by the server when accessing the system
+'''
+from TI_TimeTracker_DB_api import engine, Games, Users, Factions, Events, createNew, clearAll
 from sqlalchemy import select, or_
 from sqlalchemy.orm import sessionmaker
 import datetime as dt
 import bisect
 from time import sleep
+import sys
 
 #modify when we create games
 gdate=dt.date.today().strftime("%Y%m%d")
@@ -15,6 +18,9 @@ UF_Dict={"Charlie":("VuilRaith Cabal",1), "GRRN":("Nekro Virus",3), "Jakers":("C
 Session=sessionmaker(engine)
 
 #modify 
+#GID 1 = winner screen
+#GID 2 = action phases
+
 GID=1	#value used to identify current cgame
 
 
@@ -70,9 +76,10 @@ def gameStart(GID):
 	'''
 	with Session() as session:
 		session.add(Events(GameID=GID,EventType="GameStart"))
+		session.add(Events(GameID=GID, EventType="StartPhase", PhaseData="Setup"))	#create the event
 		session.commit()
 	#move into the strat phase
-	startPhase(GID)
+	#startPhase(GID)
 		
 def gameStop(GID,faction):
 	'''
@@ -333,19 +340,39 @@ def initiativeEvent(GID):
 			session.commit()
 		updateInitiative(GID,initiatives)
 
-def restart(GID):
+def restart():
+	#clears the existing DB and creates the new one
+	clearAll()
 	createNew()
+
+def new_game(GID):
+	#creates a new game for our use
 	createGame()
 	#GID=Session().scalars(select(Games).where(Games.GameDate==gdate)).first().GameID
 	createUsers()
 	createFactions(GID)
+	
+	
 
 if __name__=="__main__":
-	print("safe mode enabled")
+	if len(sys.argv)>1:
+		safemode=sys.argv[1]
+	else:
+		safemode="fuck you"
+	#just a little helper function
+	if safemode=="off":
+		restart()
+		print("restart complete")
+		new_game(GID)
+		print("new Game created")
+		initiativeEvent(GID)
+		gameStart(GID)
+		
+		
+	else:
+		print("safe mode enabled")
 
-	#restart(GID)
-	#print("restart complete")
-	#gameStart(GID)
+	
 
 	'''
 	initiativeEvent(GID)

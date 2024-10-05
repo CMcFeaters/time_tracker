@@ -86,8 +86,9 @@ class Events(Base):
 		Speaker - FactionName
 		Initiative - FactionName - MiscData (init number)
 	'''
-def createNew():
+def clearAll():
 	Base.metadata.drop_all(engine)
+def createNew():
 	Base.metadata.create_all(engine)
 	
 if __name__=="__main__":

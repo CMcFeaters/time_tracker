@@ -49,6 +49,7 @@ def welcome_page():
 	'''
 	with Session() as session:
 		games=session.scalars(select(Games).order_by(Games.GameID).limit(10)).all()
+		
 @app.route('/viewGame')
 def viewGame_page(GID):
 	'''
@@ -104,17 +105,19 @@ def error_phase():
 @app.route("/action", methods=['GET','POST'])#here get/post
 def action_phase():
 	if request.method=='POST':
+		'''
+		we do this twice to verify we have fresh data
+		'''
+		faction_check()	
 		with Session() as session:
-			factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
 			activeFaction=session.scalars(select(Factions).where(Factions.GameID==GID, Factions.Active==1)).first()
-			for faction in factions:
-				if request.form.get(faction.FactionName):
-					newSpeaker(GID,faction.FactionName)
-			#otherwise see if we had some action
+			'''
+			else we determine if if a button was pressed related to the ative player
+			such as pass or ending turn
+			'''
+			#items in this section shoudl be things that can only happen to the active faction
 			if(request.form.get('action')):
-				if(request.form['action']=="score"):
-					adjustPoints(GID,activeFaction.FactionName,1)
-				elif(request.form['action']=="end"):
+				if(request.form['action']=="end"):
 					endTurn(GID,activeFaction.FactionName,0)
 				elif(request.form['action']=="pass"):
 					endTurn(GID,activeFaction.FactionName,1)
@@ -123,8 +126,8 @@ def action_phase():
 	with Session() as session:
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
 		activeFaction=session.scalars(select(Factions).where(Factions.GameID==GID, Factions.Active==1)).first()
-
-	return render_template("action_phase.html",factions=factions, activeFaction=activeFaction)
+		nextFaction=factions[(factions.index(activeFaction)+1)%len(factions)]
+	return render_template("action_phase.html",factions=factions, activeFaction=activeFaction, nextFaction=nextFaction)
 		
 
 @app.route("/agenda", methods=['GET','POST'])
@@ -190,3 +193,28 @@ def strategy_phase():
 			factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
 			initiatives=range(1,9)
 			return render_template("strategy_phase.html",factions=factions, initiatives=initiatives)
+			
+def faction_check():
+	'''
+	Common function that checks if points or speaker needs to be updated.
+	'''
+	with Session() as session:
+		factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
+		activeFaction=session.scalars(select(Factions).where(Factions.GameID==GID, Factions.Active==1)).first()
+		'''this section checks through the from results to determine if a button
+		was pressed related to a specific faction such as make speaker, +/- point
+		'''
+		#items in this section should be things that can happen to any faction at any time
+		#this may need to be moved to a header or extension
+		for faction in factions:
+			if request.form.get(faction.FactionName):
+				if request.form[faction.FactionName]=="speaker":
+					#select a new speaker
+					newSpeaker(GID,faction.FactionName)
+				
+				elif(request.form[faction.FactionName]=="score"):
+					#add a point
+					adjustPoints(GID,faction.FactionName,1)
+				if(request.form[faction.FactionName]=="correct"):
+					#remove a point
+					adjustPoints(GID,faction.FactionName,-1)

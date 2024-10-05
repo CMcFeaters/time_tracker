@@ -1,36 +1,36 @@
 {% extends 'base.html' %}
 {% block content %}
+<!-- make this section dynamic, and remove teh header -->
 <title>Action Phase!</title>
 <h1> Action Phase </h1>
-{% for faction in factions %}
-  
-  <form class="form-inline" method="POST" action="{{url_for('action_phase')}}">
-	<div class="form-group">
-		<div class="input-group">
-		<span>Initiative {{ faction.Initiative }}: {{ faction.FactionName }} - Score: {{ faction.Score }} - total time {{faction.TotalTime}}</span>
-		{% if faction.Speaker %}
-		<span> - SPEAKER </span>
-		{% else %}
-		<button type="submit" name="{{faction.FactionName}}" value="speaker" class="btn btn-default">Make Speaker</button>
-		{% endif %}
-		
-		{% if faction.Pass %}
-		<span> - PASSED </span>
-		{% else %}
-		<span> - ACTIVE </span>
-		{% endif %}
-		</div>
-</div>
-</form>
-{% endfor %}
+<!-- this should be the active faction's section-->
 <form class="form-inline" method="POST" action="{{url_for('action_phase')}}">
-<div class="form-group">
 	<div class="input-group">
+<div class="form-group">
 	<h1> Active Faction: {{activeFaction.FactionName}} </h1>
-	<button type="submit" name="action" value="score" class="btn btn-default">Score Point</button>
 	<button type="submit" name="action" value="end" class="btn btn-default">End Turn</button>
 	<button type="submit" name="action" value="pass" class="btn btn-default">Pass Turn</button>
 	</div>
 </div>
 </form>
+<!-- this should identify the next faction-->
+<div class="nextFaction">Next Faction: {{nextFaction.FactionName}}</div>
+
+<!-- remaining factions section -->
+{% for faction in factions %}
+	<div class="gen_col">
+		<div class="input-group">
+		{% if faction.Pass != True %}
+		
+			<span>Initiative {{ faction.Initiative }}: {{ faction.FactionName }} </span>
+			
+		{% endif %}
+
+		</div>
+	</div>
+
+{% endfor %}
+
+
+
 {% endblock content %}

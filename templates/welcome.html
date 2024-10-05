@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<title>Welcome to the TI Time Tracker App!</title>
+<h1> Select Games</h1>
+<div class="gen_box">
+<div class="game"> {{ winningFaction.FactionName }} </div>
+<div class="game"> Score: {{ winningFaction.Score }} </div>
+<div class="game">Total Time (s): {{winningFaction.TotalTime}}</div>
+</div>
+
+<h2> Skill Issues </h2>
+{% for faction in factions %}
+<div class="win_box">
+<div class="faction"> {{ faction.FactionName }} </div>
+<div class="score"> Score: {{ faction.Score }} </div>
+<div class="time">Total Time (s): {{faction.TotalTime}}</div>
+</div>
+<!--<span>{{ faction.FactionName }} - Score: {{ faction.Score }} - Total Time: {{faction.TotalTime}}</span><br>-->
+{% endfor %}
+
+{% endblock content %}

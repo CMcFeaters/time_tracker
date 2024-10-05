@@ -1,31 +1,41 @@
 /*
 items used for the page header section
 */
-.buttonPause {
-	width: 100px;
-	height: 100px;
-}
 
-.buttonEnd{
+/*button sizes*/
+.topButton{
 	width:100px;
 	height:100px;
 }
 
-.title_box{
-	display: flex;
-	flex-wrap:wrap;
+.bigButton{
+	height:50px;
+	width:50px;
+}
+
+.speakerButton{
+	height:50px;
+	width:100px;
+}
+
+/*header area*/
+
+.header_box{
+	display: grid;
 	width:100%;
-	height:100px;
-	flex-direction:column;
-	align-items :flex-start;
-	justify-items:flex-start;
+	grid-template-columns: repeat(3,1fr);
+	grid-template-rows: 100px 25px;
+	align-items :center;
+	justify-items: space-between;
+
 }
-.title_box .pause{
-	align-self: flex-start;
-}	
-.title_box .end{
-	align-self:flex-end;
+
+.header_box div{
+	justify-self: center;
+	
 }
+	
+
 /*box used for alignment of winner screen*/
 .win_box{
 	display: flex;
@@ -38,14 +48,143 @@ items used for the page header section
 .win_box div{
 	width:33%;
 }
-
-/*box used for each action phase entry/row*/
-.action_box{
-	display: flex;
-	flex-wrap:wrap;
-	width:100%;
-	height:100px;
-	flex-direction:column;
-	align-items :flex-start;
-	justify-items:flex-start;
+.win_box .game div{
+	width:33%;
 }
+
+.active_grid{
+	display:grid;
+	grid-template-columns: repeat(3, 1fr);
+	grid-auto-rows:50px;/*minmax(25px,auto);*/
+	justify-items: start;
+	align-items: start;
+	grid-template-areas:
+	"a b b"
+	"a c d"
+	"e f f";
+}
+
+/*generic column for a box */
+.gen_col{
+	display: flex;
+	flex-direction:column;
+	align-content :center;
+	justify-content:center;
+}
+	
+.gen_col div{
+	height:30px;
+	align-self:flex-start;
+}
+
+
+/*bottom area*/
+.footer_box{
+	/*shoudl change this to flex*/
+	display:grid;
+	grid-template-columns: repeat(6,100px);
+	
+	grid-gap: 8px;
+}
+
+.footer_box div{
+	background-color: grey;
+	color:white;
+
+	
+}
+/*WHY ARE WE JUMPING TO ACTION WHEN IT SHOULD BE STRAT*/
+
+
+/*bottom area individual selection box*/
+.pts-time-speaker{
+	display:grid;
+	grid-template-columns: repeat(2, 1fr);
+	grid-auto-rows:25px;/*minmax(25px,auto);*/
+	justify-items: start;
+	align-items: start;
+	grid-template-areas:
+	"a a"
+	"a a"
+	"b b"
+	"f f"
+	"c c"
+	"c c"
+	"d e"
+	"d e";
+}
+
+
+.pts-time-speaker .speaker{
+	align-self:center;
+	justify-self:center;
+	grid-area:a;
+}
+.pts-time-speaker .speakerB{
+	grid-area:a;
+}
+.pts-time-speaker .points{
+	grid-area:b;
+	align-self:center;
+	justify-self:center;
+}
+
+.pts-time-speaker .time{
+	grid-area:f;
+	align-self:center;
+	justify-self:center;
+}
+
+.pts-time-speaker .title{
+	grid-area:c;
+	align-self: center;
+	justify-self: center;
+
+}
+.pts-time-speaker .button1{
+	grid-area:d;
+}
+.pts-time-speaker .button2{
+	grid-area:e;
+}
+
+/*.bottom-inner {
+	display: grid;
+	grid-template-columns: repeat(2, 50px);
+	grid-auto-rows:minmix(18,auto);
+	grid-gap:0px;
+}
+
+.bottom-inner .points{
+	background-color:red;
+	grid-column-start:1;
+	grid-column-end:3;
+	grid-row-start:2;
+	grid-row-end:3;
+}
+
+.bottom-inner .speaker{
+	grid-column-start:1;
+	grid-column-end:3;
+	grid-row-start: 1 ;
+	grid-row-end:2;
+}
+.bottom-inner .title{
+	grid-column-start:1;
+	grid-column-end:3;
+	grid-row-start: 3 ;
+	grid-row-end:4;
+}
+.bottom-inner .button1{
+	grid-column-start:1;
+	grid-column-end:2;
+	grid-row-start: 4 ;
+	grid-row-end:5;
+}
+.bottom-inner .button2{
+	grid-column-start:2;
+	grid-column-end:3;
+	grid-row-start: 4 ;
+	grid-row-end:5;
+}
+*/

@@ -6,6 +6,14 @@ import threading
 import time
 import datetime as dt
 
+'''
+Queue: https://docs.python.org/3/library/queue.html
+
+
+
+'''
+
+
 class Shopper():
 	def __init__(self,id):
 		self.shopID=id
