@@ -25,9 +25,9 @@ class Games(Base):
 	#relationship
 	GameFactions: Mapped[List["Factions"]]=relationship(back_populates="GamePlayed")
 	GameEvents: Mapped[List["Events"]]=relationship(back_populates="Game")	
-	'''
+
 	GameCombats: Mapped[List["Combats"]]=relationship(back_populates="Game")	#backlink to combats table
-	'''
+
 	
 class Users(Base):
 	__tablename__="users"
@@ -92,25 +92,23 @@ class Events(Base):
 		Initiative - FactionName - MiscData (init number)
 		End/StartState - ends/starts a state StateData(state "Active","Combat","Pause")
 	'''
-'''
+
 class Combats(Base):
 	__tablename__="combats"
 	#keys
 	CombatID: Mapped[int] = mapped_column(primary_key=True)
 	GameID: Mapped[int] = mapped_column(ForeignKey("games.GameID"))
-	Aggressor: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
-	Defender: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
+	#Aggressor: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
+	#Defender: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
 	
 	#data
 	StartTime: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())
 	StopTime: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())
-	
-	PhaseData: Mapped[Optional[str]]=mapped_column(String(30))
-	StateData: Mapped[Optional[str]]=mapped_column(String(30))
+
 	#relationships
 	Game: Mapped["Games"]=relationship(back_populates="GameCombats")
-	Faction: Mapped["Factions"]=relationship(back_populates="FactionActions")
-'''
+	#Faction: Mapped["Factions"]=relationship(back_populates="FactionActions")
+
 def clearAll():
 	Base.metadata.drop_all(engine)
 def createNew():
