@@ -1,5 +1,6 @@
 <!doctype html>
 <link href="{{ url_for('static',filename='styles/style.css')}}" rel="stylesheet" />
+<title>{{cPhase}} Phase!</title>
 <head>
 	<div class="header_box">
 	<!--<p style="test-align: left;">
@@ -9,9 +10,9 @@
 		</span>
 	</p>-->
 		<div><button id="pause" class="topButton" type="button" onclick="window.location.href='{{url_for('game_pause')}}';">PAUSE</button></div>
-		<div><button id="combat"	class="topButton" type="button" onclick="window.location.href='{{url_for('game_pause')}}';">COMBAT</button></div>
+		<div><button id="combat"	class="topButton" type="button" onclick="window.location.href='{{url_for('game_combat')}}';">COMBAT</button></div>
 		<div><button id="end" class="topButton" type="button" onclick="window.location.href='{{url_for('end_game')}}';">END GAME</button></div>
-		<div></div><div class="phaseID">PHASE</div>
+		<div></div><div class="phaseID">{{ cPhase }} </div>
 
 	</div>
 
@@ -20,8 +21,9 @@
 <main>
 {% block content %}{% endblock content %}
 </main>
+
 <!-- point table section-->
-<form class="form-inline" method="POST" action="{{url_for('action_phase')}}">
+<form class="form-inline" method="POST" action="{{url_for('footer_update')}}">
 	<div class="footer_box">
 	{% for faction in factions %}
 		<div class="pts-time-speaker">

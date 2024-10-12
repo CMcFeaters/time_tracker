@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+
+<br>
+<form class="form-inline" method="POST" action="{{url_for('game_combat')}}">
+
+	<div class="center"><div class="bigBoldText">Beligerants</div></div>
+	<div class="combat">
+		<div class="aggressor">Aggressor</div>
+		<div class="defender">Defender</div>
+		
+		<select name= "Aggressor" class="longButton">
+			{% for faction in factions %}
+				{% if faction.Active==1 %}
+					<option value= "{{faction.FactionName}}" selected>{{faction.FactionName}}</option>"
+				{% else %}
+					<option value= "{{faction.FactionName}}" >{{faction.FactionName}}</option>"
+				{% endif %}
+			{% endfor %}
+		</select>
+			<select name= "Defender" class="longButton">
+			{% for faction in factions %}
+				<option value= "{{faction.FactionName}}" SELECTED>{{faction.FactionName}}</option>"
+			{% endfor %}
+		</select>
+		<div></div><div></div>
+		<div>Aggressor Victory</div>
+		<div>Defender Victory</div>
+		<div>
+			<input type="radio" id="agg_button" name="winner" value="aggressor">
+		</div>
+		<div>
+			<input type="radio" id="def_button" name="winner" value="defender">
+		</div>
+
+	</div>	
+
+	<br>
+	<div class="center">
+		<button type="submit" name="action" value="complete" class="topButton">Combat Complete</button>
+		<button type="submit" name="action" value="abort" class="topButton">Abort/Draw</button>
+	</div>
+</form>
+<br>
+{% endblock content %}

@@ -1,36 +1,50 @@
 {% extends 'base.html' %}
 {% block content %}
 <!-- make this section dynamic, and remove teh header -->
-<title>Action Phase!</title>
-<h1> Action Phase </h1>
+<title>{{ cPhase }} Phase!</title>
 <!-- this should be the active faction's section-->
+<br>
 <form class="form-inline" method="POST" action="{{url_for('action_phase')}}">
-	<div class="input-group">
-<div class="form-group">
-	<h1> Active Faction: {{activeFaction.FactionName}} </h1>
-	<button type="submit" name="action" value="end" class="btn btn-default">End Turn</button>
-	<button type="submit" name="action" value="pass" class="btn btn-default">Pass Turn</button>
-	</div>
-</div>
+	<div class="active_grid">
+		<div class="activeFactionLabel">Active Faction: </div>
+		<div class="activeFaction">{{activeFaction.FactionName}}</div>
+		<div class="activeButton1"><button type="submit" name="action" value="end" class="bigButton">End</button></div>
+		<div class="activeButton2"><button type="submit" name="action" value="pass" class="bigButton">Pass</button></div>
+	</div>	
 </form>
-<!-- this should identify the next faction-->
-<div class="nextFaction">Next Faction: {{nextFaction.FactionName}}</div>
-
+<br><br><br>
 <!-- remaining factions section -->
+<div class="faction_list">
+<div> Init</div>
+<div> Faction</div>
+<div> Status</div>
 {% for faction in factions %}
-	<div class="gen_col">
-		<div class="input-group">
-		{% if faction.Pass != True %}
 		
-			<span>Initiative {{ faction.Initiative }}: {{ faction.FactionName }} </span>
-			
+		{% if faction.Pass != True %}
+			{% if faction.FactionName==activeFaction.FactionName %}
+				<div class="activeFactionList">{{ faction.Initiative }} </div>
+				<div class="activeFactionList">{{ faction.FactionName }} </div>
+				<div class="activeFactionList">ACTIVE</div>
+			{% elif faction.FactionName==nextFaction.FactionName %}
+				<div class="nextFactionList">{{ faction.Initiative }} </div>
+				<div class="nextFactionList">{{ faction.FactionName }} </div>
+				<div class="nextFactionList">NEXT</div>
+			{% else %}
+				<div class="noPass">{{ faction.Initiative }} </div>
+				<div class="noPass">{{ faction.FactionName }} </div>
+				<div></div>
+			{% endif %}
+		{% else %}
+			<div class="pass">{{ faction.Initiative }} </div>
+			<div class="pass">{{ faction.FactionName }} </div>
+			<div class="pass">pass</div>
 		{% endif %}
 
-		</div>
-	</div>
+	
 
 {% endfor %}
-
+</div>
+<br><br><br>
 
 
 {% endblock content %}

@@ -1,7 +1,13 @@
 /*
 items used for the page header section
 */
-
+/*text fonts*/
+.bigBoldText{
+	font-weight: bold;
+	font-size: 20px;
+	
+}
+	
 /*button sizes*/
 .topButton{
 	width:100px;
@@ -18,23 +24,112 @@ items used for the page header section
 	width:100px;
 }
 
+.longButton{
+	height: 50px;
+	width: 150px;
+}
+
+.wideButton{
+	height: 50px;
+	width: 208px;
+}
+/*misc flex*/
+.center{
+	display: flex;
+	width: 100%;
+	justify-content: center;
+	align-items: stretch;
+	gap:8px;
+}
+
+.end_game{
+	display: grid;
+	grid-template-columns: 180px 100px 100px;
+	grid-auto-rows: 20px;
+	justify-content: center;
+}
+.end_game div{
+	justify-self: start;
+	align-self: center;
+}
+
+/*Combat section*/
+.combat{
+	display: grid;
+	grid-template-columns:1fr 1fr;
+	grid-template-rows:20px 50px 20px 20px 20px;
+	justify-items: center;
+}
+/*.combat .aggressor{
+	flex: 1 1 auto;
+}
+
+.combat .defender{
+	flex: 1 1 auto;
+	margin-left: auto;
+}*/
+
+/*basic centered timing list timings*/
+.timing_list{
+	display: grid;
+	grid-template-columns: 300px;
+	grid-auto-rows: 20px;
+	justify-content: space-around;
+}
+
+	
+
 /*header area*/
+
 
 .header_box{
 	display: grid;
 	width:100%;
-	grid-template-columns: repeat(3,1fr);
-	grid-template-rows: 100px 25px;
+	grid-template-columns: 100px 100px 100px;
+	grid-template-rows: 100px 50px;
 	align-items :center;
-	justify-items: space-between;
-
+	justify-content: center;
+	gap:10px;
+	
 }
 
 .header_box div{
 	justify-self: center;
-	
 }
-	
+.header_box .phaseID{
+	font: 25px Arial bold;
+	min-width: 0;
+	overflow: hidden;
+}
+/*Stragtegy phase section*/
+.strategy_box{
+	display: flex; 		
+	align-items: center;
+	justify-items: start;
+	justify-content: center;
+	gap:8px;
+}
+
+.strategy_box .bigButton{
+	width: 50px;
+}
+
+.strategy_box .fName{
+	width: 300px;
+}
+
+/*status phase section*/
+.status_phase {
+	display: grid;
+	width: 100%;
+	grid-template-columns: 50px 250px;
+	grid-template-rows: 30px;
+	justify-content: center;
+	align-items: center;	
+}
+.status_phase div{
+	font: 18px  Arial bold;
+}
 
 /*box used for alignment of winner screen*/
 .win_box{
@@ -42,7 +137,7 @@ items used for the page header section
 	width:100%;
 	flex-direction:row;
 	align-items :center;
-	justify-content: center;
+	justify-items: center;
 }
 
 .win_box div{
@@ -52,57 +147,110 @@ items used for the page header section
 	width:33%;
 }
 
-.active_grid{
+/*faction list*/
+.faction_list{
 	display:grid;
-	grid-template-columns: repeat(3, 1fr);
-	grid-auto-rows:50px;/*minmax(25px,auto);*/
+	grid-template-columns: 50px 200px 50px;
+	grid-template-rows:25 px;
+	justify-content: center;
 	justify-items: start;
 	align-items: start;
+}
+
+.pass{
+	color: silver;
+}
+
+.activeFactionList{
+	background: chartreuse;
+	color: black;
+}
+
+.nextFactionList{
+	background: aquamarine;
+}
+
+
+/* this section is for displaying the active faction and the next faction*/
+.active_grid{
+	display:grid;
+	grid-auto-columns: 200px;
+	grid-auto-rows:minmax(25px,auto);
+	justify-content: center;
+	justify-items: start;
+	align-items: start;
+	gap: 10px;
 	grid-template-areas:
-	"a b b"
-	"a c d"
-	"e f f";
+	"a a"
+	"b b"
+	"c f";
 }
 
-/*generic column for a box */
-.gen_col{
-	display: flex;
-	flex-direction:column;
-	align-content :center;
-	justify-content:center;
-}
+.active_grid .activeFactionLabel{
 	
-.gen_col div{
-	height:30px;
-	align-self:flex-start;
+	grid-area:a;
+	
+	font: 18px Arial bold;
+	justify-self: center;
 }
 
+.active_grid .activeFaction{
+	
+	grid-area:b;
+	font: 25px  Arial bold;
+	justify-self: center;
+}
+
+.active_grid .activeButton1{
+	
+	grid-area:c;
+	justify-self: end;
+}
+
+.active_grid .activeButton2{
+	
+	grid-area:f;
+	
+}
 
 /*bottom area*/
 .footer_box{
 	/*shoudl change this to flex*/
-	display:grid;
-	grid-template-columns: repeat(6,100px);
-	
-	grid-gap: 8px;
+	display:flex;
+	width: 100%;
+	justify-content: center;
+	gap: 10px;
 }
 
+/*.footer_box{
+	display:grid;
+	grid-template-columns: repeat(6,108px);
+	
+	grid-gap: 8px;
+}*/
+
+/*
 .footer_box div{
+	width: 50px;
 	background-color: grey;
 	color:white;
 
 	
 }
+*/
 /*WHY ARE WE JUMPING TO ACTION WHEN IT SHOULD BE STRAT*/
 
 
 /*bottom area individual selection box*/
 .pts-time-speaker{
 	display:grid;
-	grid-template-columns: repeat(2, 1fr);
-	grid-auto-rows:25px;/*minmax(25px,auto);*/
-	justify-items: start;
-	align-items: start;
+	grid-auto-columns: 50px 50px;
+	grid-auto-rows:minmax(25px,auto);
+	justify-items: center;
+	align-items: center;
+	justify-content: center;
+	background-color: grey;
+	color:white;
 	grid-template-areas:
 	"a a"
 	"a a"
@@ -110,7 +258,6 @@ items used for the page header section
 	"f f"
 	"c c"
 	"c c"
-	"d e"
 	"d e";
 }
 
@@ -143,48 +290,9 @@ items used for the page header section
 }
 .pts-time-speaker .button1{
 	grid-area:d;
+	align-self: end;
 }
 .pts-time-speaker .button2{
 	grid-area:e;
+	align-self:end;
 }
-
-/*.bottom-inner {
-	display: grid;
-	grid-template-columns: repeat(2, 50px);
-	grid-auto-rows:minmix(18,auto);
-	grid-gap:0px;
-}
-
-.bottom-inner .points{
-	background-color:red;
-	grid-column-start:1;
-	grid-column-end:3;
-	grid-row-start:2;
-	grid-row-end:3;
-}
-
-.bottom-inner .speaker{
-	grid-column-start:1;
-	grid-column-end:3;
-	grid-row-start: 1 ;
-	grid-row-end:2;
-}
-.bottom-inner .title{
-	grid-column-start:1;
-	grid-column-end:3;
-	grid-row-start: 3 ;
-	grid-row-end:4;
-}
-.bottom-inner .button1{
-	grid-column-start:1;
-	grid-column-end:2;
-	grid-row-start: 4 ;
-	grid-row-end:5;
-}
-.bottom-inner .button2{
-	grid-column-start:2;
-	grid-column-end:3;
-	grid-row-start: 4 ;
-	grid-row-end:5;
-}
-*/

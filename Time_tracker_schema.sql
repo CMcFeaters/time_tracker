@@ -29,6 +29,7 @@ ALTER TABLE TI_TIME_TRACKER.Game
 	ADD CONSTRAINT fk_Game_ActiveFaction FOREIGN KEY (ActiveFaction) REFERENCES Faction (FactionName);
 	
 CREATE TABLE IF NOT EXISTS TI_TIME_TRACKER.Faction (
+	--information assigned to a faction--
 	FactionName varchar(50) NOT NULL,
 	GameID integer(3) NOT NULL,
 	UserID integer(3) NOT NULL,

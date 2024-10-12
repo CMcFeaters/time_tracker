@@ -1,25 +1,27 @@
 {% extends 'base.html' %}
 {% block content %}
 <title>End Game</title>
-<h1> Is it over?</h1>
+<div class="end_game">
+<div class="bigBoldText">Faction</div><div class="center"><div class="bigBoldText">Score</div></div><div class="bigBoldText">Time</div>
 {% for faction in factions %}
-	<span> {{ faction.FactionName }} - Score: {{ faction.Score }} - Total Time (s): {{faction.TotalTime}}</span><br>
-</div>
+	<div > {{ faction.FactionName }}</div><div class="center">{{ faction.Score }}</div><div>{{faction.TotalTime}}</div>
 
 {% endfor %}
-	<form class="form-inline" method="POST" action="{{url_for('end_game')}}">
-	
-		<div class="input-group">
-			<br><br><span class="input-group-addon">Select Winner: </span> 
-				<select name= "winner" >
-					{% for faction in factions %}
-						<option value= "{{faction.FactionName}}" SELECTED>{{faction.FactionName}}</option>"
-					{% endfor %}
-				</select>
-		</div>
-		<span>
-			<button id="pause" type="button" onclick="window.location.href='{{url_for('phase_selector')}}';" class="btn btn-default">Go Back</button>
-			<button type="submit" class="btn btn-default">CONFIRM!</button>
-		</span?
-	</form>
+</div>
+<br>
+<form class="form-inline" method="POST" action="{{url_for('end_game')}}">	
+	<div class="center">Select Winner: </div> 
+	<div class="center">
+			<select class="wideButton" name= "winner" >
+				{% for faction in factions %}
+					<option  value= "{{faction.FactionName}}" SELECTED>{{faction.FactionName}}</option>"
+				{% endfor %}
+			</select>
+	</div>
+	<div class="center">
+		<button class="speakerButton" id="pause" type="button" onclick="window.location.href='{{url_for('phase_selector')}}';" class="btn btn-default">Go Back</button>
+		<button class="speakerButton" type="submit" class="btn btn-default">CONFIRM!</button>
+	</div>
+</form>
+<br>
 {% endblock content %}

@@ -36,12 +36,12 @@ def updateInitiative(GID,initiative):
 			where(Factions.FactionName==key,Factions.GameID==GID)).first().Initiative=initiative[key]
 		session.commit()
 
-def pauseEvent(GID,pup):
+def boolEvent(GID,eType,pup):
 	'''
-	initiates a pause event with the state of bool pup
+	initiates a boolean (true/false) event with type eType and state of bool pup
 	'''
 	with Session() as session:
-		session.add(Events(GameID=GID, EventType="Pause", MiscData=pup))
+		session.add(Events(GameID=GID, EventType=eType, MiscData=pup))
 		session.commit()
 
 def newSpeaker(GID,faction):
@@ -79,7 +79,7 @@ def gameStart(GID):
 		session.add(Events(GameID=GID, EventType="StartPhase", PhaseData="Setup"))	#create the event
 		session.commit()
 	#move into the strat phase
-	#startPhase(GID)
+	startPhase(GID)
 		
 def gameStop(GID,faction):
 	'''
@@ -152,7 +152,15 @@ def phaseChangeDetails(GID,newPhase):
 			
 		session.commit()
 			
-	
+def changeState(GID,state):
+	with Session() as session:
+		#get teh current game
+		currentGame=session.scalars(select(Games).where(Games.GameID==GID)).first()	#get teh current game
+		session.add(Events(GameID=GID,EventType="EndState",PhaseData=currentGame.GamePhase,StateData=currentGame.GameState))	#get add an event to end teh current state
+		session.add(Events(GameID=GID,EventType="StartState",PhaseData=currentGame.GamePhase,StateData=state)) 	#add an event to start the current phase
+		currentGame.GameState=state	#update teh current game phase
+		session.commit()
+
 
 def endPhase(GID,gameover):
 	'''

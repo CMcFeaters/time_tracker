@@ -1,20 +1,22 @@
 {% extends 'base.html' %}
 {% block content %}
-<title>Strategy Phase!</title>
-<h1> Strategy Phase </h1>
 <form class="form-inline" method="POST" action="{{url_for('strategy_phase')}}">
 <div class="form-group">
-{% for faction in factions %}
-	<div class="input-group">
-		<span class="input-group-addon">{{ faction.FactionName }}</span> 
-		<select name= "{{faction.FactionName}}" >
+{% for faction in sFactions %}
+	<div class="strategy_box">
+		
+		<select name= "{{faction.FactionName}}" class="bigButton">
 			{% for initiative in initiatives %}
 				<option value= "{{initiative}}" SELECTED>{{initiative}}</option>"
 			{% endfor %}
 		</select>
+		<div class="fName">{{ faction.FactionName }}</div> 
     </div>
 {% endfor %}
-<button type="submit" class="btn btn-default">SUBMIT</button>
+<div class="center">
+<button type="submit" class="longButton">SUBMIT</button>
+</div>
 </div>
 </form>
+<br><br>
 {% endblock %}
