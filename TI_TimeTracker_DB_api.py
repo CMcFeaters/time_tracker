@@ -98,8 +98,9 @@ class Combats(Base):
 	#keys
 	CombatID: Mapped[int] = mapped_column(primary_key=True)
 	GameID: Mapped[int] = mapped_column(ForeignKey("games.GameID"))
-	#Aggressor: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
-	#Defender: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
+	Aggressor: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
+	Defender: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
+	Winner: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
 	
 	#data
 	StartTime: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())
@@ -107,7 +108,10 @@ class Combats(Base):
 
 	#relationships
 	Game: Mapped["Games"]=relationship(back_populates="GameCombats")
-	#Faction: Mapped["Factions"]=relationship(back_populates="FactionActions")
+	AggressorFaction: Mapped["Factions"]=relationship("Factions",foreign_keys=[Aggressor])
+	DefenderFaction: Mapped["Factions"]=relationship("Factions",foreign_keys=[Defender])
+	WinnerFaction: Mapped["Factions"]=relationship("Factions",foreign_keys=[Winner])
+	
 
 def clearAll():
 	Base.metadata.drop_all(engine)
