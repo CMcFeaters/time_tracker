@@ -10,16 +10,16 @@ Functions
 -Strategy timer
 -Agenda timer
 -Agenda vote tracking
--speaker order vs initiative order
--extend template to include more info/capabilities (TBD)
--Point Adder
--Multi-pause
--combat event and button
--GameID is hardcoded at 1
 
-Interface
--Clean up
--Increase button size (tablet support)
+
+-Multi-pause
+
+-GameID is hardcoded at 1
+-Agenda Steps
+-Strategy steps
+-Combat Steps
+-Action phase steps
+
 
 
 Database

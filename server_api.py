@@ -1,7 +1,7 @@
 '''
 "backend" interface for teh server.  Includes all the functions called by the server when accessing the system
 '''
-from TI_TimeTracker_DB_api import engine, Games, Users, Factions, Events, createNew, clearAll
+from TI_TimeTracker_DB_api import engine, Games, Users, Factions, Events, createNew, clearAll, Combats
 from sqlalchemy import select, or_
 from sqlalchemy.orm import sessionmaker
 import datetime as dt
@@ -23,7 +23,25 @@ Session=sessionmaker(engine)
 
 GID=1	#value used to identify current cgame
 
-
+def get_speaker_order(GID,factions):
+	'''
+		returns an array of factions in table order starting with the speaker
+	'''
+	#this will sort by speaker for display
+	tFaction=[]
+	sFaction=factions[0]	#default here incase of no speaker selected
+	#identify the speaker
+	for faction in factions:
+		tFaction.append(None)
+		if faction.Speaker:
+			sFaction=faction
+	#print("%s %s"%(sFaction.FactionName,sFaction.TableOrder))
+	#go through the faction list and order them in tableorder starting with the speaker
+	for faction in factions:
+		tFaction[(faction.TableOrder-sFaction.TableOrder)%len(factions)]=faction
+		#print("%s %s %s"%(faction.FactionName,faction.TableOrder,(faction.TableOrder-sFaction.TableOrder)%len(factions)))
+	return tFaction
+			
 
 def updateInitiative(GID,initiative):
 	'''
@@ -153,6 +171,10 @@ def phaseChangeDetails(GID,newPhase):
 		session.commit()
 			
 def changeState(GID,state):
+	'''
+	updates the state of the current game.  creates an event to end the current state and start a new state.
+	new state is equal to "state" value passed into function
+	'''
 	with Session() as session:
 		#get teh current game
 		currentGame=session.scalars(select(Games).where(Games.GameID==GID)).first()	#get teh current game
@@ -160,6 +182,7 @@ def changeState(GID,state):
 		session.add(Events(GameID=GID,EventType="StartState",PhaseData=currentGame.GamePhase,StateData=state)) 	#add an event to start the current phase
 		currentGame.GameState=state	#update teh current game phase
 		session.commit()
+
 
 
 def endPhase(GID,gameover):

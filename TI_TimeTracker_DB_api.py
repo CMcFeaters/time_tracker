@@ -22,6 +22,7 @@ class Games(Base):
 	GameRound: Mapped[int]=mapped_column(default=0)
 	GameDate: Mapped[datetime.date]
 	GameWinner: Mapped[Optional[str]]=mapped_column(String(30))
+	Active: Mapped[bool] =mapped_column(default=0)	#if active game: 1
 	#relationship
 	GameFactions: Mapped[List["Factions"]]=relationship(back_populates="GamePlayed")
 	GameEvents: Mapped[List["Events"]]=relationship(back_populates="Game")	
@@ -101,7 +102,7 @@ class Combats(Base):
 	Aggressor: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
 	Defender: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
 	Winner: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
-	
+	Active: Mapped[bool] =mapped_column(default=1)	#combat status, only 1 active combat at a time
 	#data
 	StartTime: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())
 	StopTime: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())

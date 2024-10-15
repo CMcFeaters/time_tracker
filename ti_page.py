@@ -1,7 +1,8 @@
 from flask import Flask, render_template, redirect, url_for,request
-from server_api import Session, updateInitiative, endPhase, adjustPoints, endTurn, newSpeaker, boolEvent, gameStop, changeState
+from server_api import Session, updateInitiative, endPhase, adjustPoints, endTurn, newSpeaker, boolEvent, gameStop, changeState, get_speaker_order
 from sqlalchemy import select, and_
-from TI_TimeTracker_DB_api import Games, Users, Factions, Events
+from TI_TimeTracker_DB_api import Games, Users, Factions, Events, Combats
+import datetime
 
 #config=dotenv_values(".env")
 
@@ -17,6 +18,13 @@ def phase_selector():
 	with Session() as session:
 		state=session.scalars(select(Games.GameState).where(Games.GameID==GID)).first()
 		phase=session.scalars(select(Games.GamePhase).where(Games.GameID==GID)).first()
+		active=session.scalars(select(Games.GameID).where(Games.Active==1)).all()
+		'''if len(active)==0:
+			#go to the welcome page to select a game
+		else:
+			GID=active.GameID
+			#do all the below state stuff
+		'''
 		if state=="Active":
 			if phase=="Setup":
 				return "just starting"	#url for setup
@@ -42,7 +50,7 @@ def phase_selector():
 			return redirect(url_for('error_phase'))
 
 
-@app.route('/welcome')
+@app.route('/welcome', methods=['GET','POST'])
 def welcome_page():
 	'''
 	this page displays a welcome screen for users allowing them to select an active game, view stats, or create a game
@@ -59,6 +67,11 @@ def welcome_page():
 	'''
 	with Session() as session:
 		games=session.scalars(select(Games).order_by(Games.GameID).limit(10)).all()
+		if request.method=="POST":
+			#assign the selected game to be teh active one
+			
+			return phase_selector()
+		return render_template("welcome.html",games=games,cPhase="Menu")
 		
 @app.route('/viewGame')
 def viewGame_page(GID):
@@ -120,26 +133,43 @@ def game_combat():
 	in the combat table
 	'''
 	if request.method=="POST":
+		activeCombat=session.scalars(select(Combats).where(and_(Games.GameID==GID,Combats.Active==1))).first()
 		if (request.form.get('action')):	#check if one of our action buttons was pressed
+			'''
+			the active combat is over, determine if we update participants or call it a draw
+			'''
+			
 			if(request.form['action']=="complete"):	#check if it was completed
 				print("combat completed")
 				#combat table entry
-				
+				activeCombat.Aggressor=request.form['Aggressor']
+				activeCombat.Defender=request.form.get('Defender')
+				if request.form.get('winner')=="aggressor":
+					activeCombat.Winner=request.form.get('Aggressor')
+				elif request.form.get('winner')=="defender":
+					activeCombat.Winner=request.form.get('Aggressor')
+					
+			activeCombat.Active=0		#end the combat active status
+			activeCombat.StopTime=datetime.datetime.now()
+			session.commit()
 			boolEvent(GID,"Combat",0)	#combat endevent
 			changeState(GID,"Active")	#Update teh game state
 		return phase_selector()	#find our true page
 	else:
 		if state=="Active":	#combat can only be entered from active, otherwise we ignore
+			'''
+				create a new combat event, chagne stte to combat and create an entry in our
+				combat table
+			'''
 			boolEvent(GID,"Combat",1)	#update event
 			changeState(GID,"Combat")	#update state
+			session.add(Combats(GameID=GID))	#create a new combat event
+			session.commit()
 		elif state=="Pause":	#we hit combat  while in pause
 			return redirect(url_for('game_pause'))	#return to pause page
 		return render_template("combat.html", cPhase="Combat", factions=factions)	#go to the combat page (active/combat) state
 
-'''
-GOING FROM COMBAT to PAUSE and PAUSE to COMBAT is going to be tricky.  This woudl be an example of a state that when it's complete
-it goes to the previous state.  So you'd have to have a "find last state" function
-'''
+
 @app.route('/end', methods=['GET','POST'])
 def end_game():
 	'''
@@ -186,7 +216,24 @@ def footer_update():
 	'''
 	print("hello")
 	if request.method=='POST':
-		faction_check()
+		with Session() as session:
+			factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
+			activeFaction=session.scalars(select(Factions).where(Factions.GameID==GID, Factions.Active==1)).first()
+			'''this section checks through the from results to determine if a button
+			was pressed related to a specific faction such as make speaker, +/- point
+			'''
+			for faction in factions:
+				if request.form.get(faction.FactionName):
+					if request.form[faction.FactionName]=="speaker":
+						#select a new speaker
+						newSpeaker(GID,faction.FactionName)
+					
+					elif(request.form[faction.FactionName]=="score"):
+						#add a point
+						adjustPoints(GID,faction.FactionName,1)
+					if(request.form[faction.FactionName]=="correct"):
+						#remove a point
+						adjustPoints(GID,faction.FactionName,-1)
 	return phase_selector()
 
 @app.route("/action", methods=['GET','POST'])#here get/post
@@ -245,7 +292,7 @@ def agenda_phase():
 	
 	with Session() as session:
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
-		sFactions=get_speaker_order(factions)
+		sFactions=get_speaker_order(GID,factions)
 	return render_template("agenda_phase.html",factions=factions,sFactions=sFactions,cPhase="Agenda")
 
 
@@ -306,48 +353,3 @@ def strategy_phase():
 			#initiatives: a range of numbers 1-8 for selecting initiative
 			return render_template("strategy_phase.html",factions=factions, sFactions=sFactions, initiatives=initiatives, cPhase="Strategy")
 
-def get_speaker_order(factions):
-	'''
-		returns an array of factions in table order starting with the speaker
-	'''
-	#this will sort by speaker for display
-	tFaction=[]
-	sFaction=factions[0]	#default here incase of no speaker selected
-	#identify the speaker
-	for faction in factions:
-		tFaction.append(None)
-		if faction.Speaker:
-			sFaction=faction
-	#print("%s %s"%(sFaction.FactionName,sFaction.TableOrder))
-	#go through the faction list and order them in tableorder starting with the speaker
-	for faction in factions:
-		tFaction[(faction.TableOrder-sFaction.TableOrder)%len(factions)]=faction
-		#print("%s %s %s"%(faction.FactionName,faction.TableOrder,(faction.TableOrder-sFaction.TableOrder)%len(factions)))
-	return tFaction
-			
-def faction_check():
-	'''
-	Common function that checks if points or speaker needs to be updated.
-	
-	NOTE THIS CURRENTLY ABORTS the COMBAT/PAUSE phases
-	'''
-	with Session() as session:
-		factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
-		activeFaction=session.scalars(select(Factions).where(Factions.GameID==GID, Factions.Active==1)).first()
-		'''this section checks through the from results to determine if a button
-		was pressed related to a specific faction such as make speaker, +/- point
-		'''
-		#items in this section should be things that can happen to any faction at any time
-		#this may need to be moved to a header or extension
-		for faction in factions:
-			if request.form.get(faction.FactionName):
-				if request.form[faction.FactionName]=="speaker":
-					#select a new speaker
-					newSpeaker(GID,faction.FactionName)
-				
-				elif(request.form[faction.FactionName]=="score"):
-					#add a point
-					adjustPoints(GID,faction.FactionName,1)
-				if(request.form[faction.FactionName]=="correct"):
-					#remove a point
-					adjustPoints(GID,faction.FactionName,-1)
