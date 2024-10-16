@@ -60,14 +60,7 @@ items used for the page header section
 	grid-template-rows:20px 50px 20px 20px 20px;
 	justify-items: center;
 }
-/*.combat .aggressor{
-	flex: 1 1 auto;
-}
 
-.combat .defender{
-	flex: 1 1 auto;
-	margin-left: auto;
-}*/
 
 /*basic centered timing list timings*/
 .timing_list{
@@ -78,7 +71,15 @@ items used for the page header section
 }
 
 	
-
+/*welcome page*/
+.welcome_page{
+	display: grid;
+	grid-template-columns: 100px 50px 100px 100px 150px;
+	grid-auto-rows: 50px;
+	justify-content: center;
+	justify-items: center;
+	align-items: center;
+}
 /*header area*/
 
 

@@ -10,44 +10,40 @@ app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 #app.config["SQLALCHEMY_DATABSE_URI"]="mariadb+mariadbconnector://%s:%s@127.0.0.1:%s/%s"%(config['uname'],config['pw'],config['port'],config['db'])
 
-GID=1
 
 @app.route("/")
 def phase_selector():
 	#this reads the current game phase and redirects the user to the representative page
-	with Session() as session:
-		state=session.scalars(select(Games.GameState).where(Games.GameID==GID)).first()
-		phase=session.scalars(select(Games.GamePhase).where(Games.GameID==GID)).first()
-		active=session.scalars(select(Games.GameID).where(Games.Active==1)).all()
-		'''if len(active)==0:
-			#go to the welcome page to select a game
-		else:
-			GID=active.GameID
+		
+		GID=get_active_game() #get teh active game ID or return to the welcome page
+		with Session() as session:
+			print("ActiveID: %s"%GID)
+			state=session.scalars(select(Games.GameState).where(Games.GameID==GID)).first()
+			phase=session.scalars(select(Games.GamePhase).where(Games.GameID==GID)).first()
 			#do all the below state stuff
-		'''
-		if state=="Active":
-			if phase=="Setup":
-				return "just starting"	#url for setup
-			elif phase=="Action":
-				return redirect(url_for('action_phase'))
-			elif phase=="Status":
-				return redirect(url_for('status_phase'))
-			elif phase=="Agenda":
-				return redirect(url_for('agenda_phase'))
-			elif phase=="Strategy":
-				return redirect(url_for('strategy_phase'))
-			elif phase=="Completed":
-				return redirect(url_for('game_winner'))	#url for end screen
+			if state=="Active":
+				if phase=="Setup":
+					return "just starting"	#url for setup
+				elif phase=="Action":
+					return redirect(url_for('action_phase'))
+				elif phase=="Status":
+					return redirect(url_for('status_phase'))
+				elif phase=="Agenda":
+					return redirect(url_for('agenda_phase'))
+				elif phase=="Strategy":
+					return redirect(url_for('strategy_phase'))
+				elif phase=="Completed":
+					return redirect(url_for('game_winner'))	#url for end screen
+				else:
+					print ("Action Fuck UP")
+					return redirect(url_for('error_phase'))
+			elif state=="Pause":
+				return redirect(url_for('game_pause'))
+			elif state=="Combat":
+				return redirect(url_for('game_combat'))
 			else:
-				print ("Action Fuck UP")
+				print ("State fuckup: %s"%state)
 				return redirect(url_for('error_phase'))
-		elif state=="Pause":
-			return redirect(url_for('game_pause'))
-		elif state=="Combat":
-			return redirect(url_for('game_combat'))
-		else:
-			print ("State fuckup: %s"%state)
-			return redirect(url_for('error_phase'))
 
 
 @app.route('/welcome', methods=['GET','POST'])
@@ -66,12 +62,15 @@ def welcome_page():
 	
 	'''
 	with Session() as session:
-		games=session.scalars(select(Games).order_by(Games.GameID).limit(10)).all()
+		games=session.scalars(select(Games).order_by(Games.GameID)).all()
 		if request.method=="POST":
 			#assign the selected game to be teh active one
-			
+			gameID=int(request.form['gameSelect'])
+			activeGame=session.scalars(select(Games).where(Games.GameID==gameID)).first()
+			activeGame.Active=1
+			session.commit()
 			return phase_selector()
-		return render_template("welcome.html",games=games,cPhase="Menu")
+		return render_template("welcome.html",games=games,cPhase="Welcome")
 		
 @app.route('/viewGame')
 def viewGame_page(GID):
@@ -79,6 +78,7 @@ def viewGame_page(GID):
 	a page where users view the status of a single game
 	this will pump out all the relevant stats we want to see
 	'''
+	GID=get_active_game() #get teh active game ID or return to the welcome page
 	pass
 
 @app.route('/pause', methods=['GET','POST'])
@@ -89,6 +89,7 @@ def game_pause():
 		NOTE: may want to add a "pause" state somewhere in the db  rather than just having it as
 		an event so that it has some resiliency 
 	'''
+	GID=get_active_game() #get teh active game ID or return to the welcome page
 	with Session() as session:
 		#get the state
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
@@ -123,6 +124,8 @@ def game_combat():
 	'''
 	#will have to initiate combat event (Default start/stop time will be "now")
 	#will have to stop combat event (need ot change devault stop time to "now")
+	
+	GID=get_active_game() #get teh active game ID or return to the welcome page
 	with Session() as session:	#get state and factions 
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
 		state=session.scalars(select(Games.GameState).where(Games.GameID==GID)).first()
@@ -175,6 +178,7 @@ def end_game():
 	'''
 		this page allows teh user to select the game being over
 	'''
+	GID=get_active_game() #get teh active game ID or return to the welcome page
 	if request.method=='POST':
 		print("here")
 		gameStop(GID,request.form.get('winner'))
@@ -189,6 +193,7 @@ def game_winner():
 	'''
 	this is the page you get when the game is oVER!
 	'''
+	GID=get_active_game() #get teh active game ID or return to the welcome page
 	with Session() as session:
 		winner=session.scalars(select(Games).where(Games.GameID==GID)).first()
 		winningFaction=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.FactionName==winner.GameWinner)).first()
@@ -214,7 +219,7 @@ def footer_update():
 	this function is called when one of the buttons in the footer is pressed
 	it updates speaker, or score, then redirects to the appropriate URL function
 	'''
-	print("hello")
+	GID=get_active_game() #get teh active game ID or return to the welcome page
 	if request.method=='POST':
 		with Session() as session:
 			factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
@@ -242,6 +247,7 @@ def action_phase():
 	action phase page allowing you to end/pass turns,
 	display turn order
 	'''
+	GID=get_active_game() #get teh active game ID or return to the welcome page
 	if request.method=='POST':
 
 		with Session() as session:
@@ -280,6 +286,7 @@ def action_phase():
 @app.route("/agenda", methods=['GET','POST'])
 def agenda_phase():
 	#manage agenda phase
+	GID=get_active_game() #get teh active game ID or return to the welcome page
 	if request.method=='POST':
 		with Session() as session:
 			factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.TableOrder)).all()
@@ -301,7 +308,7 @@ def status_phase():
 	'''
 		this page displays the steps for the status phase and allows you to move to the next phase
 	'''
-	
+	GID=get_active_game() #get teh active game ID or return to the welcome page
 	if request.method=='POST':
 		'''with Session() as session:
 			factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
@@ -325,6 +332,7 @@ def strategy_phase():
 		this page allows the user to select initiatives
 		must select different initiatives for each faction
 	'''
+	GID=get_active_game() #get teh active game ID or return to the welcome page
 	if request.method=="POST":
 		#here is where we'd check the initiatives, assign them, jump to action phase
 		initDict={}
@@ -346,10 +354,34 @@ def strategy_phase():
 	else:
 		with Session() as session:
 			factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
-			sFactions=get_speaker_order(factions)
+			sFactions=get_speaker_order(GID,factions)
 			initiatives=range(1,9)
 			#factions: the normal setup of factions used for the footer
 			#iFactions: factions arranged by speaker order user for the display
 			#initiatives: a range of numbers 1-8 for selecting initiative
 			return render_template("strategy_phase.html",factions=factions, sFactions=sFactions, initiatives=initiatives, cPhase="Strategy")
 
+def get_active_game():
+	'''
+		gets the active game or cleansup the games if multiple active
+		if active game returns ID
+		if multipe or 0 active, sets no active games and redirects to welcome page
+	'''
+	
+	with Session() as session:
+		activeGames=session.scalars(select(Games).where(Games.Active==1)).all()
+		if len(activeGames)>1:
+			#multiple active games detected.  close them all and revert them back to the menu
+			for game in activeGames:
+				game.Active=0
+			session.commit()
+			print("Multiple Games")
+			return redirect(url_for('welcome_page'))
+		elif len(activeGames)==0:
+			#no active games
+			print("No Games")
+			return redirect(url_for('welcome_page'))
+		else:
+			#return just the active game
+			print("Active Game: %s"%activeGames[0].GameID)
+			return activeGames[0].GameID

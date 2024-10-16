@@ -2,20 +2,14 @@
 <link href="{{ url_for('static',filename='styles/style.css')}}" rel="stylesheet" />
 <title>{{cPhase}} Phase!</title>
 <head>
+{% if cPhase!="Welcome" %}
 	<div class="header_box">
-	<!--<p style="test-align: left;">
-		<button id="pause" type="button" onclick="window.location.href='{{url_for('game_pause')}}';" class="buttonPause">PAUSE</button>
-		<span style="float:right;">
-			<button id="end" type="button" onclick="window.location.href='{{url_for('end_game')}}';">END GAME</button>
-		</span>
-	</p>-->
 		<div><button id="pause" class="topButton" type="button" onclick="window.location.href='{{url_for('game_pause')}}';">PAUSE</button></div>
 		<div><button id="combat"	class="topButton" type="button" onclick="window.location.href='{{url_for('game_combat')}}';">COMBAT</button></div>
 		<div><button id="end" class="topButton" type="button" onclick="window.location.href='{{url_for('end_game')}}';">END GAME</button></div>
 		<div></div><div class="phaseID">{{ cPhase }} </div>
-
 	</div>
-
+{% endif %}
 </head>
 
 <main>

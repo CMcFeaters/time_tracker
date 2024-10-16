@@ -21,7 +21,12 @@ Session=sessionmaker(engine)
 #GID 1 = winner screen
 #GID 2 = action phases
 
-GID=1	#value used to identify current cgame
+GID=1	#value used to identify current only during creating a enw game with script for testing
+
+
+
+			
+			
 
 def get_speaker_order(GID,factions):
 	'''

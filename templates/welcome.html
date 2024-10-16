@@ -1,21 +1,23 @@
 {% extends 'base.html' %}
 {% block content %}
-<title>Welcome to the TI Time Tracker App!</title>
-<h1> Select Games</h1>
-<div class="gen_box">
-<div class="game"> {{ winningFaction.FactionName }} </div>
-<div class="game"> Score: {{ winningFaction.Score }} </div>
-<div class="game">Total Time (s): {{winningFaction.TotalTime}}</div>
-</div>
 
-<h2> Skill Issues </h2>
-{% for faction in factions %}
-<div class="win_box">
-<div class="faction"> {{ faction.FactionName }} </div>
-<div class="score"> Score: {{ faction.Score }} </div>
-<div class="time">Total Time (s): {{faction.TotalTime}}</div>
-</div>
-<!--<span>{{ faction.FactionName }} - Score: {{ faction.Score }} - Total Time: {{faction.TotalTime}}</span><br>-->
-{% endfor %}
+<form class="form-inline" method="POST" action="{{url_for('welcome_page')}}">
+	<div class="welcome_page">
+		<div>Select</div>
+		<div>ID</div>
+		<div>Date</div>
+		<div>Winner</div>
+		<div>Phase</div>
+
+		{% for game in games %}
+			<div><button type="submit" name="gameSelect" value='{{game.GameID}}' class="speakerButton">Select</button></div>
+			<div class="game"> {{ game.GameID }} </div>
+			<div class="game"> {{ game.GameDate }} </div>
+			<div class="game"> {{ game.GameWinner }} </div>
+			<div class="game"> {{ game.GamePhase }} </div>
+		
+		{% endfor %}
+	</div>
+</form>
 
 {% endblock content %}
