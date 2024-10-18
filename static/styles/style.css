@@ -86,7 +86,7 @@ items used for the page header section
 .header_box{
 	display: grid;
 	width:100%;
-	grid-template-columns: 100px 100px 100px;
+	grid-template-columns: 100px 100px 100px 100px;
 	grid-template-rows: 100px 50px;
 	align-items :center;
 	justify-content: center;
@@ -101,7 +101,15 @@ items used for the page header section
 	font: 25px Arial bold;
 	min-width: 0;
 	overflow: hidden;
+	justify-self: end;
 }
+.header_box .flavor{
+	font: 25px Arial bold;
+	min-width: 0;
+	overflow: hidden;
+	justify-self: start;
+}
+
 /*Stragtegy phase section*/
 .strategy_box{
 	display: flex; 		

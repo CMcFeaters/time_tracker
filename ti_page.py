@@ -16,6 +16,8 @@ def phase_selector():
 	#this reads the current game phase and redirects the user to the representative page
 		
 		GID=get_active_game() #get teh active game ID or return to the welcome page
+		if GID=="no_active":
+			return redirect(url_for('welcome_page'))
 		with Session() as session:
 			print("ActiveID: %s"%GID)
 			state=session.scalars(select(Games.GameState).where(Games.GameID==GID)).first()
@@ -112,7 +114,7 @@ def game_pause():
 			changeState(GID,"Pause")	#change the state
 		elif state=="Combat":	#we clicked puase while in combat, go to combat
 			return redirect(url_for('game_combat'))
-		return render_template("pause.html", cPhase="Paused", factions=factions)	#if the state is pause or active, go to pause page
+		return render_template("pause.html", cPhase="Paused", factions=factions, flavor="Game")	#if the state is pause or active, go to pause page
 
 @app.route('/combat', methods=['GET','POST'])
 def game_combat():
@@ -170,8 +172,20 @@ def game_combat():
 			session.commit()
 		elif state=="Pause":	#we hit combat  while in pause
 			return redirect(url_for('game_pause'))	#return to pause page
-		return render_template("combat.html", cPhase="Combat", factions=factions)	#go to the combat page (active/combat) state
+		return render_template("combat.html", cPhase="Glorious", factions=factions, flavor="Combat")	#go to the combat page (active/combat) state
 
+
+@app.route('/stop', methods=['GET'])
+def stop_game():
+	'''
+		This deactivates the current game and kicks you to the phase_select screen
+	'''
+	GID=get_active_game()
+	with Session() as session:
+		activeGame=session.scalars(select(Games).where(Games.GameID==GID)).first()
+		activeGame.Active=0
+		session.commit()
+	return phase_selector()
 
 @app.route('/end', methods=['GET','POST'])
 def end_game():
@@ -186,7 +200,7 @@ def end_game():
 	else:
 		with Session() as session:
 			factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(and_(Factions.Score,Factions.TotalTime))).all()
-			return render_template("end_game.html",factions=factions)
+			return render_template("end_game.html",factions=factions, cPhase="End", flavor="It?")
 		
 @app.route('/winner', methods=['GET','POST'])
 def game_winner():
@@ -200,7 +214,7 @@ def game_winner():
 		uID=session.scalars(select(Factions.UserID).where(Factions.GameID==GID,Factions.FactionName==winner.GameWinner)).first()
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.FactionName!=winner.GameWinner).order_by(and_(Factions.Score,Factions.TotalTime))).all()
 		user=session.scalars(select(Users).where(Users.UserID==uID)).first()
-		return render_template('winner.html',winningFaction=winningFaction, user=user, factions=factions)	#create this item
+		return render_template('winner.html',winningFaction=winningFaction, user=user, factions=factions, cPhase="Gratz",flavor="Nerd")	#create this item
 
 @app.route("/Error")
 def error_phase():
@@ -280,7 +294,7 @@ def action_phase():
 				nextFaction="None"
 		
 			
-	return render_template("action_phase.html",factions=factions, activeFaction=activeFaction, nextFaction=nextFaction, cPhase="Action")
+	return render_template("action_phase.html",factions=factions, activeFaction=activeFaction, nextFaction=nextFaction, cPhase="Action", flavor="Phase")
 		
 
 @app.route("/agenda", methods=['GET','POST'])
@@ -300,7 +314,7 @@ def agenda_phase():
 	with Session() as session:
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
 		sFactions=get_speaker_order(GID,factions)
-	return render_template("agenda_phase.html",factions=factions,sFactions=sFactions,cPhase="Agenda")
+	return render_template("agenda_phase.html",factions=factions,sFactions=sFactions,cPhase="Agenda", flavor="Phase")
 
 
 @app.route("/status", methods=['GET','POST'])#here get/post
@@ -323,7 +337,7 @@ def status_phase():
 	with Session() as session:
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
 		
-	return render_template("status_phase.html",factions=factions)
+	return render_template("status_phase.html",factions=factions,cPhase="Status",flavor="Phase")
 
 
 @app.route("/strategy", methods=['GET','POST'])
@@ -359,7 +373,7 @@ def strategy_phase():
 			#factions: the normal setup of factions used for the footer
 			#iFactions: factions arranged by speaker order user for the display
 			#initiatives: a range of numbers 1-8 for selecting initiative
-			return render_template("strategy_phase.html",factions=factions, sFactions=sFactions, initiatives=initiatives, cPhase="Strategy")
+			return render_template("strategy_phase.html",factions=factions, sFactions=sFactions, initiatives=initiatives, cPhase="Strategy", flavor="Phase")
 
 def get_active_game():
 	'''
@@ -376,11 +390,11 @@ def get_active_game():
 				game.Active=0
 			session.commit()
 			print("Multiple Games")
-			return redirect(url_for('welcome_page'))
+			return "no_active"
 		elif len(activeGames)==0:
 			#no active games
 			print("No Games")
-			return redirect(url_for('welcome_page'))
+			return "no_active"
 		else:
 			#return just the active game
 			print("Active Game: %s"%activeGames[0].GameID)

@@ -7,7 +7,8 @@
 		<div><button id="pause" class="topButton" type="button" onclick="window.location.href='{{url_for('game_pause')}}';">PAUSE</button></div>
 		<div><button id="combat"	class="topButton" type="button" onclick="window.location.href='{{url_for('game_combat')}}';">COMBAT</button></div>
 		<div><button id="end" class="topButton" type="button" onclick="window.location.href='{{url_for('end_game')}}';">END GAME</button></div>
-		<div></div><div class="phaseID">{{ cPhase }} </div>
+		<div><button id="end" class="topButton" type="button" onclick="window.location.href='{{url_for('stop_game')}}';">STOP GAME</button></div>
+		<div></div><div class="phaseID">{{ cPhase }} </div><div class="flavor">{{ flavor }}</div>
 	</div>
 {% endif %}
 </head>

@@ -14,7 +14,7 @@ Functions
 
 -Multi-pause
 
--GameID is hardcoded at 1
+Print Outs
 -Agenda Steps
 -Strategy steps
 -Combat Steps

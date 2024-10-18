@@ -8,6 +8,7 @@
 		{% endif %}
 	{{ faction.FactionName }}</div>
 {% endfor %}
+<!--
 <br>
 <div class="timing_list">
 <div class="center"><div class="bigBoldText"> Agenda Steps </div></div>
@@ -24,6 +25,7 @@
 <div> 2. Repeat for next agenda </div>
 <div> 3. Ready Planets</div>
 </div>
+-->
 <form class="form-inline" method="POST" action="{{url_for('agenda_phase')}}">
 	<div class="center">
 			<button type="submit" name="action" value="END" class="longButton">END Agenda Phase</button>

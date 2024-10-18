@@ -12,8 +12,8 @@ import sys
 #modify when we create games
 gdate=dt.date.today().strftime("%Y%m%d")
 
-#delete later
-UF_Dict={"Charlie":("VuilRaith Cabal",1), "GRRN":("Nekro Virus",3), "Jakers":("Council Keleres",2),
+#update to reflect new game
+UF_Dict={"Charlie":("VuilRaith Cabal",1), "GRRN":("Nekro Virus",3), "Hythem":("Council Keleres",2),
 		"Sunny":("Barony of Letnev",5),"Nathan":("Naaz-Rohka Alliance",4)}
 Session=sessionmaker(engine)
 
