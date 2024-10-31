@@ -29,8 +29,13 @@ def request_state(id):
 		
 		#ask for a picture from the server
 		print("Initiating connection")
-		s.connect((HOST,PORT))
-		print(json.dumps(data))
+		try:
+			s.connect((HOST,PORT))
+			#print(json.dumps(data))
+		except:
+			print("Worker %s encountered a connection error"%id)
+			s.close()
+			return("Worker %s encountered an error"%id)
 		s.sendall(bytearray(json.dumps(data),'utf-8'))
 		#bytearray(repr(data),'utf-8')
 		#once we connect, recieve the response until connection is closed
@@ -59,7 +64,7 @@ def main():
 	all_threads=[]
 	id=10
 	try:
-		for i in range(1,2):
+		for i in range(1,3):
 			print ("request: ",i)
 			t=threading.Thread(target=request_state, args=([id]))
 			print ("starting")

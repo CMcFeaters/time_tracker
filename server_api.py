@@ -13,8 +13,8 @@ import sys
 gdate=dt.date.today().strftime("%Y%m%d")
 
 #update to reflect new game
-UF_Dict={"Charlie":("VuilRaith Cabal",1), "GRRN":("Nekro Virus",3), "Hythem":("Council Keleres",2),
-		"Sunny":("Barony of Letnev",5),"Nathan":("Naaz-Rohka Alliance",4)}
+UF_Dict={"Charlie":("Sardakk N'orr",5), "GRRN":("Yssaril Tribes",2), "Hythem":("Emirates of Hacan",4),
+		"Sunny":("Xxcha Kingdom",1),"Nathan":("The Arborec",3)}
 Session=sessionmaker(engine)
 
 #modify 
