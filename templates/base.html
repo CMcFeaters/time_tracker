@@ -20,7 +20,7 @@
 <!-- point table section-->
 <form class="form-inline" method="POST" action="{{url_for('footer_update')}}">
 	<div class="footer_box">
-	{% for faction in factions %}
+	{% for faction in factions|sort(attribute='TableOrder') %}
 		<div class="pts-time-speaker">
 			{% if faction.Speaker %}
 				<div class="speaker"> SPEAKER </div>
