@@ -25,7 +25,7 @@ def phase_selector():
 			#do all the below state stuff
 			if state=="Active":
 				if phase=="Setup":
-					return "just starting"	#url for setup
+					return redirect(url_for('setup_phase'))	#url for setup
 				elif phase=="Action":
 					return redirect(url_for('action_phase'))
 				elif phase=="Status":
@@ -51,18 +51,19 @@ def phase_selector():
 @app.route('/welcome', methods=['GET','POST'])
 def welcome_page():
 	'''
-	this page displays a welcome screen for users allowing them to select an active game, view stats, or create a game
-	-view game stats
-	-view all time stats
-	-view faction stats
-	-view player stats
-	Show recent 10 games with view option
-	Show recent 10 players with view option
-	Create new game option
-	Create new player option
-	
-	
+	this page displays a welcome screen for users allowing them to select an active game
+	future options: 
+		view stats, or create a game
+		-view game stats
+		-view all time stats
+		-view faction stats
+		-view player stats
+		Show recent 10 games with view option
+		Show recent 10 players with view option
+		Create new game option
+		Create new player option	
 	'''
+
 	with Session() as session:
 		games=session.scalars(select(Games).order_by(Games.GameID)).all()
 		if request.method=="POST":
@@ -73,6 +74,21 @@ def welcome_page():
 			session.commit()
 			return phase_selector()
 		return render_template("welcome.html",games=games,cPhase="Welcome")
+
+@app.route('/setup', methods=['GET','POST'])
+def setup_phase():
+	'''
+	this page is for whena game is created but hasn't started
+	users have the option to start the game go back to teh welcome screen
+	'''
+	GID=get_active_game()	#get teh active game
+	with Session() as session:
+		factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()	#get all teh factions for the bottom element
+		if request.method=="POST":	#if they hit the "Start button"
+			
+			endPhase(GID,0) #end the setup phase
+			return phase_selector()
+		return render_template("setup_phase.html",factions=factions,cPhase="Setup", flavor="Phase")
 		
 @app.route('/viewGame')
 def viewGame_page(GID):

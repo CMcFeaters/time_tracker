@@ -70,6 +70,15 @@ items used for the page header section
 	justify-content: space-around;
 }
 
+/*Setup page*/
+.setup_page{
+	display: grid;
+	grid-template-columns: 100px;
+	grid-auto-rows: 100px;
+	justify-content: center;
+	justify-items: center;
+	align-items: center;
+}
 	
 /*welcome page*/
 .welcome_page{

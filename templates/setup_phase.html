@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block content %}
+<title>{{phase}} Phase!</title>
+
+<form class="inline_form" method="POST" action="{{url_for('setup_phase')}}">
+<div class="setup_page"><button type="submit" name="start" value="start" class="topButton">Start</button></div>
+</form>
+<br>
+
+{% endblock %}
+

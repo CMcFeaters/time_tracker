@@ -21,7 +21,7 @@ Session=sessionmaker(engine)
 #GID 1 = winner screen
 #GID 2 = action phases
 
-GID=1	#value used to identify current only during creating a enw game with script for testing
+#GID=1	#value used to identify current only during creating a enw game with script for testing
 
 
 
@@ -98,11 +98,11 @@ def gameStart(GID):
 	starts game by creting a start game event
 	'''
 	with Session() as session:
-		session.add(Events(GameID=GID,EventType="GameStart"))
+		#session.add(Events(GameID=GID,EventType="GameStart"))	#once setup phase is complete, we will need to remove this.
 		session.add(Events(GameID=GID, EventType="StartPhase", PhaseData="Setup"))	#create the event
 		session.commit()
 	#move into the strat phase
-	startPhase(GID)
+	#startPhase(GID) #once setup phase is complete, we will need to remove this.
 		
 def gameStop(GID,faction):
 	'''
@@ -124,7 +124,10 @@ def startPhase(GID):
 	phase_order={"Setup":"Strategy","Strategy":"Action","Action":"Status","Status":"Agenda","Agenda":"Strategy"}
 	with Session() as session:
 		currentGame=session.scalars(select(Games).where(Games.GameID==GID)).first()
-		#create new phase
+		#if it's the setup phase, we need to add a gamestart event since the game is starting
+		if (currentGame.GamePhase=="Setup"):
+				session.add(Events(GameID=GID,EventType="GameStart"))
+		#create new phase and update
 		newPhase=phase_order[currentGame.GamePhase]	#use the dict to bump us to the next phase, separate so it persists
 		currentGame.GamePhase=newPhase
 		#start the phase event
@@ -399,10 +402,10 @@ if __name__=="__main__":
 	if safemode=="off":
 		restart()
 		print("restart complete")
-		new_game(GID)
+		new_game(1)
 		print("new Game created")
-		initiativeEvent(GID)
-		gameStart(GID)
+		initiativeEvent(1)
+		gameStart(1)
 		
 		
 	else:
