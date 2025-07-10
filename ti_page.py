@@ -1,5 +1,5 @@
 from flask import Flask, render_template, redirect, url_for,request
-from server_api import Session, updateInitiative, endPhase, adjustPoints, endTurn, newSpeaker, boolEvent, gameStop, changeState, get_speaker_order
+from server_api import Session, updateInitiative, endPhase, adjustPoints, endTurn, newSpeaker, boolEvent, gameStop, changeState, delete_old_game, get_speaker_order, create_new_game,add_factions
 from sqlalchemy import select, and_
 from TI_TimeTracker_DB_api import Games, Users, Factions, Events, Combats
 import datetime
@@ -67,7 +67,7 @@ def welcome_page():
 	with Session() as session:
 		games=session.scalars(select(Games).order_by(Games.GameID)).all()
 		if request.method=="POST":
-			#assign the selected game to be teh active one
+			
 			gameID=int(request.form['gameSelect'])
 			activeGame=session.scalars(select(Games).where(Games.GameID==gameID)).first()
 			activeGame.Active=1
@@ -75,6 +75,86 @@ def welcome_page():
 			return phase_selector()
 		return render_template("welcome.html",games=games,cPhase="Welcome")
 
+@app.route("/create_game_page", methods=['GET','POST'])
+def create_game():
+	'''
+	this is called when a user selects the option to create a new game
+	'''
+	
+	if request.method=='POST':
+		
+
+		#validate entries
+		players=[]
+		factions=[]
+		for entry in range(1,9):
+			'''
+			go through each form row.  if it's user name is NA skip it
+			if the user is already in the list return with an error
+			it the faction is already in the list, return iwht an error
+			else append to our two arrays
+			'''
+			player=request.form.get("user"+str(entry))
+			faction=request.form.get("faction"+str(entry))
+			if player!="NA":
+				if players.count(player)==0:
+					players.append(request.form.get("user"+str(entry)))
+				else:
+					print(f'{player} has multiple entries')
+					return(redirect(url_for('create_game')))
+				if factions.count(faction)==0:
+					factions.append(request.form.get("faction"+str(entry)))
+				else:
+					print(f'{faction} has multiple entries')
+					return(redirect(url_for('create_game')))
+		#get the player IDS from teh player names
+		playerIDs=[Session().scalars(select(Users.UserID).where(Users.UserName==player)).first() for player in players]
+		print(players)
+		print(playerIDs)
+		#put it all into a single array of tuples (userID,(faction,order))
+		gameConfig=[(factions[i],(playerIDs[i],i+1)) for i in range(len(players))]
+		print(gameConfig)
+		#create the game
+		gID=create_new_game()
+		print(f'game created')
+		#add factions tot he game
+		add_factions(gID,gameConfig)
+		print(f'factions added')
+		return redirect(url_for('welcome_page'))
+
+	else:
+		with Session() as session:
+			players=session.scalars(select(Users.UserName)).all()
+			players.append('NA')
+			faction_choices=['Arborec','Argent Flight','Barony of Letnev','Clan of Saar','Council Keleres','Embers of Muaat','Emirates of Hacan','Empyrean','Federation of Sol',
+			'Ghosts of Creuss','L1Z1X Mindnet','Mahact Gene-Sorcerers','Mentak Coalition','Naalu Collective','Naaz-Rokha Alliance','Nekro Virus','Nomad','Sardakk N’orr',
+			'Titans of Ul','Universities of Jol-Nar','Vuil Raith Cabal','Winnu','Xxcha Kingdom','Yin Brotherhood','Yssaril Tribes']
+		return render_template("create_game.html",players=players,faction_choices=faction_choices,cPhase="Welcome")
+
+@app.route("/delete_game_page", methods=['GET','POST'])
+def delete_game():
+	'''
+	this is called when a user selects the option to create a new game
+	'''
+	
+	
+	if request.method=='POST':
+		print("HERE WE ARE")
+		#this will be what we do when we create a new game
+		dGID=request.form.get("deleteGame")	#validate entries
+		if request.form.get(dGID)=="NO":
+			#if they didn't select "YES" return to the welcome page
+			print(f'{dGID} - No selected')
+		else:
+			#else we are deleting it	
+			print(f'We are deleting game: {dGID}')
+			delete_old_game(int(dGID))
+		return redirect(url_for('welcome_page'))
+	with Session() as session:
+		games=session.scalars(select(Games).order_by(Games.GameID)).all()
+	return render_template("delete.html",games=games,cPhase="Welcome")
+
+	
 @app.route('/setup', methods=['GET','POST'])
 def setup_phase():
 	'''
@@ -415,3 +495,4 @@ def get_active_game():
 			#return just the active game
 			print("Active Game: %s"%activeGames[0].GameID)
 			return activeGames[0].GameID
+			

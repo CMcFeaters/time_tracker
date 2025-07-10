@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<form class="form-inline" method="POST" action="{{url_for('delete_game')}}">
+	<div class="delete_page">
+		<div>Delete</div>
+		<div>ID</div>
+		<div>Date</div>
+		<div>Winner</div>
+		<div>Phase</div>
+		<div></div>
+		{% for game in games %}
+			<div><button type="submit" name="deleteGame" value='{{game.GameID}}' class="speakerButton">Select</button></div>
+			<div class="game"> {{ game.GameID }} </div>
+			<div class="game"> {{ game.GameDate }} </div>
+			<div class="game"> {{ game.GameWinner }} </div>
+			<div class="game"> {{ game.GamePhase }} </div>
+			<div>
+			<select name="{{game.GameID}}" class="speakerButton">
+				<option value="YES">YES</option>
+				<option value="NO" SELECTED>NO</option>
+			</select>
+			</div>
+		{% endfor %}
+
+	</div>
+</form>
+<div class="center"><div><button type="submit" name="nevermind" class="wideButton" onclick="window.location.href='{{url_for('welcome_page')}}';">Nevermind</button></div>
+
+{% endblock content %}

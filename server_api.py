@@ -2,7 +2,7 @@
 "backend" interface for teh server.  Includes all the functions called by the server when accessing the system
 '''
 from TI_TimeTracker_DB_api import engine, Games, Users, Factions, Events, createNew, clearAll, Combats
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, delete
 from sqlalchemy.orm import sessionmaker
 import datetime as dt
 import bisect
@@ -13,8 +13,8 @@ import sys
 gdate=dt.date.today().strftime("%Y%m%d")
 
 #update to reflect new game
-UF_Dict={"Charlie":("Sardakk N'orr",5), "GRRN":("Yssaril Tribes",2), "Hythem":("Emirates of Hacan",4),
-		"Sunny":("Xxcha Kingdom",1),"Nathan":("The Arborec",3)}
+UF_Dict={"Charlie":("Titans of Ul",4), "Hythem":("Mentak Coalition",3),
+		"Sunny":("Embers of Muaat",2),"Nathan":("Vuil'Raith Cabal",1)}
 Session=sessionmaker(engine)
 
 #modify 
@@ -238,6 +238,7 @@ def startTurn(GID,faction):
 	
 def endTurn(GID,faction,fPass):
 	'''
+	
 	ends a faction's turn, if it's a pass, updates passing
 	start's the next faction's turn
 	
@@ -254,8 +255,9 @@ def endTurn(GID,faction,fPass):
 			session.scalars(select(Factions).where(Factions.FactionName==faction)).first().Pass=True
 		#find the next faction
 		session.commit()
-	nextFaction=findNext(GID)
 	updateTime(GID,faction)	#updates total time with most recent turn
+	nextFaction=findNext(GID)
+	
 	
 	if nextFaction=="none":
 		#print("Ending phase due to no players left")
@@ -263,24 +265,50 @@ def endTurn(GID,faction,fPass):
 	else:
 		startTurn(GID,nextFaction)
 
+
+def getPauseTime(GID,turnStartTime):
+	'''
+	finds the length of a pause
+	finds all pauses with this faction
+	finds all the pauses that occured since turnStart
+	finds all the associated un-pauses
+	calculates the time
+	returns that value
+	'''
+	pauseTime=dt.timedelta(0)
+	with Session() as session:
+		#find all pauses since this turn start
+		print("Start time: %s"%turnStartTime)
+		pauses=session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="Pause").filter(Events.EventTime>=turnStartTime).order_by(Events.EventID.desc())).all()
+		#verify we paused at least 1 time
+		if len(pauses)>0:
+			#for each pair of pauses, fidn teh total time paused
+			for i in range(int(len(pauses)/2)):
+				#find the difference 
+				pauseTime+=(pauses[i*2].EventTime-pauses[(i*2)+1].EventTime)
+
+	return pauseTime
+	
 def updateTime(GID,faction):
 	'''
+	called when ending a turn
 	finds the time delta and applies it to the factions total time
+	needs to count the number of pauses
+	should have a:
+		"get_turn_time"
+		get_pause_time which returns the time spent paused during a turn (totals)
+		get_combat_time which returns the time spent in combat during a turn (totals)
+		total time should be:
+		get_turn_time - get_pause_time
+	
 	'''
 	with Session() as session:
 		turnStart=session.scalars(select(Events).where(Events.FactionName==faction,Events.EventType=="StartTurn").order_by(Events.EventID.desc())).first()	#most recent start
 		turnStop=session.scalars(select(Events).where(Events.FactionName==faction,Events.GameID==GID,or_(Events.EventType=="EndTurn",Events.EventType=="PassTurn")).order_by(Events.EventID.desc())).first() #most recent stop
 		turnTime=turnStop.EventTime-turnStart.EventTime	#subtract the last and second to last (lazy but i'm on a fucking schedule)
-		
-		#find pause
-		lastPause=session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="Pause",Events.MiscData==1).order_by(Events.EventID.desc())).all()
-		if len(lastPause)>0:
-			lastPause=lastPause[0]
-			lastUnPause=session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="Pause",Events.MiscData==0).order_by(Events.EventID.desc())).first()
-			if (lastPause.EventID>turnStart.EventID and lastPause.EventID<turnStop.EventID):
-				#there was a pause
-				pauseTime=lastUnPause.EventTime-lastPause.EventTime
-				turnTime-=pauseTime
+
+
+		turnTime-=getPauseTime(GID,turnStart.EventTime)
 		print("%s turn time: %s"%(faction,turnTime))
 		actFact=session.scalars(select(Factions).where(Factions.FactionName==faction)).first()
 		actFact.TotalTime+=turnTime
@@ -321,7 +349,59 @@ def findNext(GID):
 	
 #start adding functionality
 #port over to flask front end
+#################game creation section################
 
+def createFactions(GID):
+	#modify when adding create factions for a game (deprecate)
+	with Session() as session:
+		for key in UF_Dict.keys():
+			session.add(Factions(FactionName=UF_Dict[key][0], 
+			UserID=session.scalars(select(Users).where(Users.UserName==key)).first().UserID, 
+			GameID=GID,TableOrder=UF_Dict[key][1]))
+		session.commit()
+
+def add_factions(GID, gameConfig):
+	'''
+		adds users/factions to the game
+		gameConfig=('faction':(userID,tableOrder))
+	'''
+	with Session() as session:
+		for item in gameConfig:
+			session.add(Factions(FactionName=item[0],
+			UserID=item[1][0],
+			GameID=GID,
+			TableOrder=item[1][1]))
+		session.commit()
+
+def create_new_game(gameDate=gdate):
+	'''
+	creates a new game with a default date of today
+	returns the newly created gameID
+	'''
+	print("TeSt")
+	with Session() as session:
+		newGame=Games(GameDate=gameDate)
+		session.add(newGame)
+		session.commit()
+		print ("GameID {}".format(newGame.GameID))
+	return newGame.GameID
+
+def delete_old_game(GID):
+	'''
+	given a game ID, deletes all entries associated with that gameID
+	deletes from:
+		Games Table
+		Factions Table
+		Events Table
+		Combats Table
+	'''
+	with Session() as session:
+		session.query(Combats).filter(Combats.GameID==GID).delete()
+		session.query(Events).filter(Events.GameID==GID).delete()
+		session.query(Factions).filter(Factions.GameID==GID).delete()
+		session.query(Games).filter(Games.GameID==GID).delete()
+		session.commit()
+		
 def gameStat(GID):
 	'''
 	displays the basic game stats such as time spent in each phase, number of rounds, etc
@@ -330,6 +410,7 @@ def gameStat(GID):
 		pass
 		
 
+
 #####################helper functions for initial testing####################
 def turnHelper(GID,passer):
 	with Session() as session:
@@ -337,14 +418,13 @@ def turnHelper(GID,passer):
 		sleep(1)
 		endTurn(GID,activeFact,passer)
 
-def createGame():
-	#modify when we get to creating games
+		
+def createNewUser(GID,uName):
+	'''creates a new user and adds to db'''
 	with Session() as session:
-		newGame=Games(GameDate=gdate)
-		session.add(newGame)
+		session.add(Users(Username=uName))
 		session.commit()
 		
-
 def createUsers():
 	#modify when we create a new user (deprecate)
 	with Session() as session:
@@ -356,14 +436,7 @@ def createUsers():
 		session.add(Users(UserName="Hythem"))
 		session.commit()
 		
-def createFactions(GID):
-	#modify when adding create factions for a game (deprecate)
-	with Session() as session:
-		for key in UF_Dict.keys():
-			session.add(Factions(FactionName=UF_Dict[key][0], 
-			UserID=session.scalars(select(Users).where(Users.UserName==key)).first().UserID, 
-			GameID=GID,TableOrder=UF_Dict[key][1]))
-		session.commit()
+
 
 def initiativeEvent(GID):
 	#used for starting initiatives (deprecate)
@@ -404,8 +477,10 @@ if __name__=="__main__":
 		print("restart complete")
 		new_game(1)
 		print("new Game created")
-		initiativeEvent(1)
-		gameStart(1)
+		#initiativeEvent(1)
+		#gameStart(1)
+		#endPhase(1,0)
+		#endPhase(1,0)
 		
 		
 	else:
