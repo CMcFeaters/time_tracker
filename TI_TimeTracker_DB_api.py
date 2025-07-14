@@ -59,7 +59,8 @@ class Factions(Base):
 	User: Mapped["Users"]=relationship(back_populates="FactionsPlayed")
 	FactionActions: Mapped[List["Events"]]=relationship(back_populates="Faction")#is this right?
 	#constraints
-	PrimaryKeyConstraint(FactionName,GameID,name="pk_factions")
+	PrimaryKeyConstraint(FactionName,GameID,name="pk_factions")#the primary key is made up of Factinoname and GameID so a unique entry in the table is this combination
+	
 
 class Events(Base):
 	__tablename__="events"
@@ -73,9 +74,11 @@ class Events(Base):
 	MiscData: Mapped[Optional[int]]
 	PhaseData: Mapped[Optional[str]]=mapped_column(String(30))
 	StateData: Mapped[Optional[str]]=mapped_column(String(30))
+	#Round: Mapped[Optional[int]]	#the round the event occured in
 	#relationships
 	Game: Mapped["Games"]=relationship(back_populates="GameEvents")
 	Faction: Mapped["Factions"]=relationship(back_populates="FactionActions")
+	
 	#constraints
 	#PrimaryKeyConstraint(EventID,GameID,name="pk_Events")
 	'''

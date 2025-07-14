@@ -10,6 +10,20 @@
 		<div><button id="end" class="topButton" type="button" onclick="window.location.href='{{url_for('stop_game')}}';">STOP GAME</button></div>
 		<div></div><div class="phaseID">{{ cPhase }} </div><div class="flavor">{{ flavor }}</div>
 	</div>
+{% elif cPhase=="Welcome" %}
+	<div class="welcome_header_box">
+		<div><button id="newGame" class="topButton" type="button" onclick="window.location.href='{{url_for('welcome_page')}}';">Home</button></div>
+		<div><button id="newGame" class="topButton" type="button" onclick="window.location.href='{{url_for('create_game')}}';">New Game</button></div>
+		<div><button id="newPlayer"	class="topButton" type="button" onclick="window.location.href='{{url_for('delete_game')}}';">Delete Game</button></div>
+		<div><button id="newPlayer"	class="topButton" type="button" onclick="window.location.href='{{url_for('add_player')}}';">New Player</button></div>
+		<div><button id="newPlayer"	class="topButton" type="button" >STATS</button></div>
+
+		<div></div>
+		<!--
+		<div class="phaseID">{{ cPhase }} </div>
+		<div class="flavor">{{ flavor }}</div>
+		-->
+	</div>
 {% endif %}
 </head>
 

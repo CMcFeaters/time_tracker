@@ -1,5 +1,5 @@
 from flask import Flask, render_template, redirect, url_for,request
-from server_api import Session, updateInitiative, endPhase, adjustPoints, endTurn, newSpeaker, boolEvent, gameStop, changeState, delete_old_game, get_speaker_order, create_new_game,add_factions
+from server_api import Session, updateInitiative, endPhase, adjustPoints, endTurn, newSpeaker, boolEvent, gameStop, changeState, delete_old_game, get_speaker_order, create_new_game,add_factions, create_player
 from sqlalchemy import select, and_
 from TI_TimeTracker_DB_api import Games, Users, Factions, Events, Combats
 import datetime
@@ -109,17 +109,17 @@ def create_game():
 					return(redirect(url_for('create_game')))
 		#get the player IDS from teh player names
 		playerIDs=[Session().scalars(select(Users.UserID).where(Users.UserName==player)).first() for player in players]
-		print(players)
-		print(playerIDs)
+		#print(players)
+		#print(playerIDs)
 		#put it all into a single array of tuples (userID,(faction,order))
 		gameConfig=[(factions[i],(playerIDs[i],i+1)) for i in range(len(players))]
-		print(gameConfig)
+		#print(gameConfig)
 		#create the game
 		gID=create_new_game()
-		print(f'game created')
+		#print(f'game created')
 		#add factions tot he game
 		add_factions(gID,gameConfig)
-		print(f'factions added')
+		#print(f'factions added')
 		return redirect(url_for('welcome_page'))
 
 	else:
@@ -130,6 +130,19 @@ def create_game():
 			'Ghosts of Creuss','L1Z1X Mindnet','Mahact Gene-Sorcerers','Mentak Coalition','Naalu Collective','Naaz-Rokha Alliance','Nekro Virus','Nomad','Sardakk N’orr',
 			'Titans of Ul','Universities of Jol-Nar','Vuil Raith Cabal','Winnu','Xxcha Kingdom','Yin Brotherhood','Yssaril Tribes']
 		return render_template("create_game.html",players=players,faction_choices=faction_choices,cPhase="Welcome")
+
+@app.route("/add_player_page",methods=['GET','POST'])
+def add_player():
+	'''
+		create a new player, reads data from text box
+		need to do input validation
+	'''
+	if request.method=="POST":
+		player=request.form.get("pName")
+		create_player(player)
+		return redirect(url_for('welcome_page'))
+	
+	return render_template('add_player.html',cPhase="Welcome")
 
 @app.route("/delete_game_page", methods=['GET','POST'])
 def delete_game():
@@ -388,7 +401,8 @@ def action_phase():
 				i+=1
 			if i>len(factions):
 				nextFaction="None"
-		
+		for faction in factions:
+			print(f'{faction.FactionName} total time: {faction.TotalTime}')
 			
 	return render_template("action_phase.html",factions=factions, activeFaction=activeFaction, nextFaction=nextFaction, cPhase="Action", flavor="Phase")
 		

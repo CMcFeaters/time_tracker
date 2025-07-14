@@ -1,33 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
 <form class="form-inline" method="POST" action="{{url_for('add_player')}}">
-	<div class="create_game_page">
-		<div>Order</div>
-		<div>User</div>
-		<div>Faction</div>
-		{% for i in range(1,9) %}	
-			<div class="order number">{{i}}</div>
-			<div class="game select">
-				<select name= "user{{i}}" class="wideButton">
-				{% for player in players %}
-					<option value= "{{player}}" SELECTED>{{player}}</option>"
-				{% endfor %}
-			</select>
-			</div>
-			<div class="game select">
-				<select name= "faction{{i}}" class="wideButton">
-				{% for faction in faction_choices %}
-					<option value= "{{faction}}" SELECTED>{{faction}}</option>"
-				{% endfor %}
-			</select>
-			</div>
-			
-		{% endfor %}
+	<div class="add_player_page">
+		<label for="pName">Player Name:</label>
+		<input type="text" id="pName" name="pName">
 	</div>
-	
-
-	<div class="center"><div><button type="submit" name="newGame" class="wideButton">Submit</button></div></div>
+	<div class="center"><div><button type="submit" name="newPlayer" class="wideButton">Submit</button></div></div>
 </form>
-	<div class="center"><div><button type="submit" name="back" class="wideButton" onclick="window.location.href='{{url_for('welcome_page')}}';">Nevermind</button></div>
 
 {% endblock content %}
