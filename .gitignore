@@ -131,6 +131,10 @@ env.bak/
 venv.bak/
 Scripts/
 *.cfg
+*.ini
+
+OBE/
+alembic/
 
 # Spyder project settings
 .spyderproject

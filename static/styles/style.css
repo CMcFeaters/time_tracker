@@ -212,13 +212,24 @@ items used for the page header section
 }
 
 /*faction list*/
-.faction_list{
+.active_grid .faction_list{
+	grid-area:x;
 	display:grid;
-	grid-template-columns: 50px 200px 50px;
+	grid-template-columns: 50px 200px;/* 50px;*/
 	grid-template-rows:25 px;
 	justify-content: center;
 	justify-items: start;
 	align-items: start;
+}
+
+.active_grid .pass_list{
+	grid-area:y;
+	display:grid;
+	grid-template-columns: 50px 200px;/* 50px;*/
+	grid-template-rows:25 px;
+	justify-content: center;
+	justify-items: end;
+	align-items: end;
 }
 
 .pass{
@@ -247,7 +258,9 @@ items used for the page header section
 	grid-template-areas:
 	"a a"
 	"b b"
-	"c f";
+	"c f"
+	"x y"
+	"e e";
 }
 
 .active_grid .activeFactionLabel{
@@ -255,6 +268,12 @@ items used for the page header section
 	grid-area:a;
 	
 	font: 18px Arial bold;
+	justify-self: center;
+}
+.active_grid .undoButton{
+	
+	grid-area:e;
+	
 	justify-self: center;
 }
 
@@ -268,13 +287,13 @@ items used for the page header section
 .active_grid .activeButton1{
 	
 	grid-area:c;
-	justify-self: end;
+	justify-self: start;
 }
 
 .active_grid .activeButton2{
 	
 	grid-area:f;
-	
+	justify-self: end;
 }
 
 /*bottom area*/

@@ -1,5 +1,5 @@
 from flask import Flask, render_template, redirect, url_for,request
-from server_api import Session, updateInitiative, endPhase, adjustPoints, endTurn, newSpeaker, boolEvent, gameStop, changeState, delete_old_game, get_speaker_order, create_new_game,add_factions, create_player
+from server_api import Session, updateInitiative, endPhase, adjustPoints, endTurn, newSpeaker, boolEvent, gameStop, changeState, delete_old_game, get_speaker_order, create_new_game,add_factions, create_player, undo_endTurn
 from sqlalchemy import select, and_
 from TI_TimeTracker_DB_api import Games, Users, Factions, Events, Combats
 import datetime
@@ -119,6 +119,7 @@ def create_game():
 		#print(f'game created')
 		#add factions tot he game
 		add_factions(gID,gameConfig)
+		newSpeaker(gID,factions[0])
 		#print(f'factions added')
 		return redirect(url_for('welcome_page'))
 
@@ -378,13 +379,18 @@ def action_phase():
 			end/pass active factions turn
 			'''
 			activeFaction=session.scalars(select(Factions).where(Factions.GameID==GID, Factions.Active==1)).first()
-
+			#figure out what we're doing and execute that
 			if(request.form.get('action')):
 				if(request.form['action']=="end"):
 					endTurn(GID,activeFaction.FactionName,0)
 				elif(request.form['action']=="pass"):
 					endTurn(GID,activeFaction.FactionName,1)
 					return(phase_selector())	#on everyone passing we will go to the next phase
+				elif(request.form['action']=="undo"):
+					print(f'Undoing turn for {activeFaction.FactionName}')
+					undo_endTurn(GID,activeFaction.FactionName)
+					print(f'Complete')
+					
 
 	with Session() as session:
 		'''find the next faction or list none if there is no next'''

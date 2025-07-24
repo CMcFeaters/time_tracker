@@ -74,7 +74,7 @@ class Events(Base):
 	MiscData: Mapped[Optional[int]]
 	PhaseData: Mapped[Optional[str]]=mapped_column(String(30))
 	StateData: Mapped[Optional[str]]=mapped_column(String(30))
-	#Round: Mapped[Optional[int]]	#the round the event occured in
+	Round: Mapped[Optional[int]]	#the round the event occured in
 	#relationships
 	Game: Mapped["Games"]=relationship(back_populates="GameEvents")
 	Faction: Mapped["Factions"]=relationship(back_populates="FactionActions")
