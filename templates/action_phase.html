@@ -7,10 +7,10 @@
 <form class="form-inline" method="POST" action="{{url_for('action_phase')}}">
 	<div class="active_grid">
 		<div class="activeFactionLabel">Active Faction: </div>
-		<div class="activeFaction">{{activeFaction.FactionName}}</div>
+		<div class="activeFaction">{{activeFaction.FactionName}} - ({{activeUser}})</div>
 		<div class="activeButton1"><button type="submit" name="action" value="end" class="longButton">End</button></div>
 		<div class="activeButton2"><button type="submit" name="action" value="pass" class="longButton">Pass</button></div>
-		<div class="undoButton"><button type="submit" name="action" value="undo" class="speakerButton">Undo</button></div>
+		<div class="undoButton"><button type="submit" name="action" value="undo" class="longButton">Undo</button></div>
 		<div class="faction_list">
 			<div> Init</div>
 			<div> Faction</div>

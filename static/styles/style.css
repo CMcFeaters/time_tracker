@@ -25,8 +25,9 @@ items used for the page header section
 }
 
 .longButton{
-	height: 50px;
+	height: 75px;
 	width: 150px;
+	font-size: 2em;
 }
 
 .wideButton{
@@ -171,11 +172,15 @@ items used for the page header section
 	align-items: center;
 	justify-items: start;
 	justify-content: center;
+	line-height: 80px;
 	gap:8px;
 }
 
 .strategy_box .bigButton{
-	width: 50px;
+	width: 100px;
+	height: 75px;
+	text-align: center;
+	font-size: 2em;
 }
 
 .strategy_box .fName{
@@ -325,7 +330,23 @@ items used for the page header section
 
 
 /*bottom area individual selection box*/
-.pts-time-speaker{
+.footer_sections{
+	display:grid;
+	grid-auto-columns: 100px;
+	grid-auto-rows:minmax(25px,auto);
+	justify-items: center;
+	align-items: center;
+	justify-content: center;
+	grid-template-areas:
+	"top"
+	"bottom";
+}
+
+.footer_sections .upper{
+	grid-area: top;
+}
+.footer_sections .pts-time-speaker{
+	grid-area: bottom;
 	display:grid;
 	grid-auto-columns: 50px 50px;
 	grid-auto-rows:minmax(25px,auto);

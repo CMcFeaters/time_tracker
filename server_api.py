@@ -475,10 +475,12 @@ def add_factions(GID, gameConfig):
 	'''
 	with Session() as session:
 		for item in gameConfig:
+			uName=session.scalars(select(Users).where(Users.UserID==item[1][0])).first().UserName
 			session.add(Factions(FactionName=item[0],
 			UserID=item[1][0],
 			GameID=GID,
-			TableOrder=item[1][1]))
+			TableOrder=item[1][1],
+			UserName=uName))
 		session.commit()
 
 def create_player(pName):
@@ -662,7 +664,7 @@ if __name__=="__main__":
 	print("Pause")
 	pauseEvent(False,GID)
 	print("UnPause")
-	newSpeaker(UF_Dict["Charlie"][0], GID)
+	fSpeaker(UF_Dict["Charlie"][0], GID)
 	print("new Speaker")
 	newSpeaker(UF_Dict["Sunny"][0],GID)
 	print("new Speaker")

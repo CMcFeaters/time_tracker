@@ -396,6 +396,7 @@ def action_phase():
 		'''find the next faction or list none if there is no next'''
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
 		activeFaction=session.scalars(select(Factions).where(Factions.GameID==GID, Factions.Active==1)).first()
+		activeUser=session.scalars(select(Users).where(Users.UserID==activeFaction.UserID)).first().UserName
 		nextFaction=""
 		i=1
 		while nextFaction=="":	
@@ -410,7 +411,7 @@ def action_phase():
 		for faction in factions:
 			print(f'{faction.FactionName} total time: {faction.TotalTime}')
 			
-	return render_template("action_phase.html",factions=factions, activeFaction=activeFaction, nextFaction=nextFaction, cPhase="Action", flavor="Phase")
+	return render_template("action_phase.html",factions=factions, activeUser=activeUser,activeFaction=activeFaction, nextFaction=nextFaction, cPhase="Action", flavor="Phase")
 		
 
 @app.route("/agenda", methods=['GET','POST'])

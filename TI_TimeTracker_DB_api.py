@@ -54,6 +54,7 @@ class Factions(Base):
 	TotalTime: Mapped[datetime.timedelta] =mapped_column(default=datetime.timedelta(seconds=0))
 	Pass: Mapped[bool]=mapped_column(default=0)
 	Score: Mapped[int]=mapped_column(default=0)
+	UserName: Mapped[str]=mapped_column(String(30))
 	#relationships
 	GamePlayed: Mapped["Games"]=relationship(back_populates="GameFactions")
 	User: Mapped["Users"]=relationship(back_populates="FactionsPlayed")

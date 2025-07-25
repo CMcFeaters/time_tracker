@@ -35,17 +35,20 @@
 <form class="form-inline" method="POST" action="{{url_for('footer_update')}}">
 	<div class="footer_box">
 	{% for faction in factions|sort(attribute='TableOrder') %}
-		<div class="pts-time-speaker">
-			{% if faction.Speaker %}
-				<div class="speaker"> SPEAKER </div>
-			{% else %}
-				<div class="speakerB"><button type="submit" name="{{faction.FactionName}}" value="speaker" class="speakerButton">Make Speaker</button></div>
-			{% endif %}
-			<div class="points">{{ faction.Score }}</div>
-			<div class="time">{{ faction.TotalTime }}</div>
-			<div class="title">{{ faction.FactionName }}</div>
-			<div class="button1"><button type="submit" name="{{faction.FactionName}}" value="score" class="bigButton">+1</button></div>
-			<div class="button2"><button type="submit" name="{{faction.FactionName}}" value="correct" class="bigButton">-1</button></div>
+		<div class="footer_sections">
+			<div class="upper">({{faction.UserName}})</div>
+			<div class="pts-time-speaker">
+				{% if faction.Speaker %}
+					<div class="speaker"> SPEAKER </div>
+				{% else %}
+					<div class="speakerB"><button type="submit" name="{{faction.FactionName}}" value="speaker" class="speakerButton">Make Speaker</button></div>
+				{% endif %}
+				<div class="points">{{ faction.Score }}</div>
+				<div class="time">{{ faction.TotalTime }}</div>
+				<div class="title">{{ faction.FactionName }}</div>
+				<div class="button1"><button type="submit" name="{{faction.FactionName}}" value="score" class="bigButton">+1</button></div>
+				<div class="button2"><button type="submit" name="{{faction.FactionName}}" value="correct" class="bigButton">-1</button></div>
+			</div>
 		</div>
 	{% endfor %}
 	</div>
