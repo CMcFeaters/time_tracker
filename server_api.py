@@ -13,8 +13,7 @@ import sys
 gdate=dt.date.today().strftime("%Y%m%d")
 
 #update to reflect new game
-UF_Dict={"Charlie":("Titans of Ul",4), "Hythem":("Mentak Coalition",3),
-		"Sunny":("Embers of Muaat",2),"Nathan":("Vuil'Raith Cabal",1)}
+strategyNameDict={1:"Leadership",2:"Diplomacy",3:"Politics",4:"Construction",5:"Trade",6:"Warfare",7:"Technology",8:"Imperial",9:"None"}
 Session=sessionmaker(engine)
 
 #modify 
@@ -28,24 +27,87 @@ Session=sessionmaker(engine)
 			
 			
 
-def get_speaker_order(GID,factions):
+def getSpeakerOrder(GID,active=False,names=False):
 	'''
-		returns an array of factions in table order starting with the speaker
+		returns an array of factions in table order starting with the identified factionname
 	'''
 	#this will sort by speaker for display
-	tFaction=[]
-	sFaction=factions[0]	#default here incase of no speaker selected
-	#identify the speaker
-	for faction in factions:
-		tFaction.append(None)
-		if faction.Speaker:
-			sFaction=faction
-	#print("%s %s"%(sFaction.FactionName,sFaction.TableOrder))
-	#go through the faction list and order them in tableorder starting with the speaker
-	for faction in factions:
-		tFaction[(faction.TableOrder-sFaction.TableOrder)%len(factions)]=faction
-		#print("%s %s %s"%(faction.FactionName,faction.TableOrder,(faction.TableOrder-sFaction.TableOrder)%len(factions)))
+	
+	with Session() as session:
+		factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
+		tFaction=[None]*len(factions)
+		if active:	#speaker order starting with active
+			bFact=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first()
+		else:	#speaker order starting with speaker
+			bFact=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Speaker==1)).first()
+		if names:
+			for faction in factions:
+				tFaction[(faction.TableOrder-bFact.TableOrder)%len(factions)]=faction.FactionName
+		else:
+			for faction in factions:
+				tFaction[(faction.TableOrder-bFact.TableOrder)%len(factions)]=faction
 	return tFaction
+
+def getSpeakerOrderByName(GID,factionName,names=False):
+	'''
+		returns an array of factions in table order starting with the identified factionname
+	'''
+	#this will sort by speaker for display
+	
+	with Session() as session:
+		factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
+		tFaction=[None]*len(factions)
+		bFact=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.FactionName==factionName)).first()
+		if names:
+			for faction in factions:
+				tFaction[(faction.TableOrder-bFact.TableOrder)%len(factions)]=faction.FactionName
+		else:
+			for faction in factions:
+				tFaction[(faction.TableOrder-bFact.TableOrder)%len(factions)]=faction
+	return tFaction		
+
+def findNextSpeakerOrderByName(GID,factionName):
+	'''
+		returns the next factionin table order starting with the identified factionname
+	'''
+	#this will sort by speaker for display
+	
+	with Session() as session:
+		factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
+		tFaction=[None]*len(factions)
+		bFact=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.FactionName==factionName)).first()
+		for faction in factions:
+			tFaction[(faction.TableOrder-bFact.TableOrder)%len(factions)]=faction.FactionName
+		nextFaction=tFaction[(tFaction.index(nextFaction)+1)%len(tFaction)]
+	return tFaction		
+
+def assignStrat(GID,stratDict):
+	'''
+		given a stratDict, assigns the strategy 1,2 to each faction
+		sets the strat status appropriately
+		calls the intiative fucntion
+	'''
+	with Session() as session:
+		for key in stratDict:
+			#get each faction
+			faction=session.scalars(select(Factions).
+			where(Factions.FactionName==key,Factions.GameID==GID)).first()
+			#assign stategy cards
+			faction.Strategy1=stratDict[key][0]
+			faction.Strategy2=stratDict[key][1]
+			#assign names
+			faction.StrategyName1=strategyNameDict[stratDict[key][0]]
+			faction.StrategyName2=strategyNameDict[stratDict[key][1]]
+			#assign strategy status, 1,0,-1 : ready, used, N/A
+			faction.StrategyStatus1=1
+			if stratDict[key][1]<9:
+				faction.StrategyStatus2=1
+			else:
+				faction.StrategyStatus2=-1
+			#assign initiative
+			faction.Initiative=min(stratDict[key][0],stratDict[key][1])
+		session.commit()
+			#stopped here, need to assign initiave and set the strategy values
 			
 
 def updateInitiative(GID,initiative):
@@ -62,6 +124,7 @@ def updateInitiative(GID,initiative):
 def boolEvent(GID,eType,pup):
 	'''
 	initiates a boolean (true/false) event with type eType and state of bool pup
+	this is used by pause
 	'''
 	with Session() as session:
 		session.add(Events(GameID=GID, EventType=eType, MiscData=pup, Round=getRound(GID)))
@@ -235,6 +298,18 @@ def startTurn(GID,faction):
 		session.add(Events(GameID=GID,EventType="StartTurn",FactionName=faction, Round=getRound(GID)))
 		session.commit()
 	
+def endStrat(GID,faction,state):
+	'''
+		ends a strategic action for a faction
+		state indicates if it's teh "primary" or "secondary" action that is ending
+	'''
+	with Session() as session:
+		session.add(Events(GameID=GID,EventType="EndTurn",MiscData=state,FactionName=faction, Round=getRound(GID)))	#create the event either a primary or secondary strategy
+		session.commit()
+	#update this factions' time on the clock
+	updateTime(GID,faction)
+	
+
 def endTurn(GID,faction,fPass):
 	'''
 	
@@ -248,11 +323,11 @@ def endTurn(GID,faction,fPass):
 	call startTurn or, if all pass, end phase
 	'''
 	passing=["EndTurn","PassTurn"]
-	print(f'{faction} is {passing[fPass]}')
+	#print(f'{faction} is {passing[fPass]}')
 	with Session() as session:
 		session.add(Events(GameID=GID,EventType=passing[fPass],FactionName=faction, Round=getRound(GID)))	#create the event
 		if fPass:
-			print(f'Updating {faction} status to passing')
+			#print(f'Updating {faction} status to passing')
 			#session.scalars(select(Factions).where(Factions.FactionName==faction)).first().Pass=True
 			session.execute(update(Factions).where(Factions.FactionName==faction).values(Pass=True))
 		#find the next faction
@@ -267,7 +342,7 @@ def endTurn(GID,faction,fPass):
 	else:
 		startTurn(GID,nextFaction)
 
-def undo_endTurn(GID,faction):
+def undoEndTurn(GID,faction):
 	'''
 	
 	undos ending a faction's turn, if it's undoing a pass(1), updates passing
@@ -334,13 +409,13 @@ def undo_endTurn(GID,faction):
 		session.execute(update(Events).where(Events.EventID==last_start.EventID).values(EventType="Correct-StartTurn"))
 		session.execute(update(Factions).where(Factions.GameID==GID,Factions.FactionName==faction).values(Active=False))
 		#modify the "previous faction" end event
-		print(f'-modifying {prev_end.EventType} and active status for {prev_end.FactionName}')
+		#print(f'-modifying {prev_end.EventType} and active status for {prev_end.FactionName}')
 		session.execute(update(Events).where(Events.EventID==prev_end.EventID).values(EventType="Correct-"+prev_end.EventType))
 		session.execute(update(Factions).where(Factions.GameID==GID,Factions.FactionName==prev_end.FactionName).values(Active=True))
 		session.commit()
 	
 	#start the previous faction's turn
-	print(f'-Starting {prev_end.FactionName} turn')
+	#print(f'-Starting {prev_end.FactionName} turn')
 #	startTurn(GID,prev_end.FactionName,1)
 
 def getPauseTime(GID,turnStartTime):
@@ -355,7 +430,7 @@ def getPauseTime(GID,turnStartTime):
 	pauseTime=dt.timedelta(0)
 	with Session() as session:
 		#find all pauses since this turn start
-		print("Start time: %s"%turnStartTime)
+		#print("Start time: %s"%turnStartTime)
 		pauses=session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="Pause").filter(Events.EventTime>=turnStartTime).order_by(Events.EventID.desc())).all()
 		#verify we paused at least 1 time
 		if len(pauses)>0:
@@ -397,17 +472,17 @@ def updateTime(GID,faction,fwd_bwd=1):
 		
 		#determine if this is a normal time add or if we're undoing a turn
 		if fwd_bwd==-1:
-			print(f'subtracting {faction} time by {turnTime} from {actFact.TotalTime} to {actFact.TotalTime-turnTime}')
+			#print(f'subtracting {faction} time by {turnTime} from {actFact.TotalTime} to {actFact.TotalTime-turnTime}')
 			session.execute(update(Factions).where(Factions.GameID==GID,Factions.FactionName==faction).values(TotalTime=actFact.TotalTime-turnTime))
 		else:
-			print(f'adding {faction} time by {turnTime} from {actFact.TotalTime} to {actFact.TotalTime+turnTime}')
+			#print(f'adding {faction} time by {turnTime} from {actFact.TotalTime} to {actFact.TotalTime+turnTime}')
 			session.execute(update(Factions).where(Factions.GameID==GID,Factions.FactionName==faction).values(TotalTime=actFact.TotalTime+turnTime))
 		#if undo:
 			#actFact.TotalTime-=turnTime
 		#else:
 			#normal add
 			#actFact.TotalTime+=turnTime
-		print(f'{actFact.FactionName} adding {turnTime} to total time {actFact.TotalTime}')
+		#print(f'{actFact.FactionName} adding {turnTime} to total time {actFact.TotalTime}')
 		session.commit()
 		
 
@@ -468,7 +543,7 @@ def createFactions(GID):
 			GameID=GID,TableOrder=UF_Dict[key][1]))
 		session.commit()
 
-def add_factions(GID, gameConfig):
+def addFactions(GID, gameConfig):
 	'''
 		adds users/factions to the game
 		gameConfig=('faction':(userID,tableOrder))
@@ -483,7 +558,7 @@ def add_factions(GID, gameConfig):
 			UserName=uName))
 		session.commit()
 
-def create_player(pName):
+def createPlayer(pName):
 	'''
 		adds a new player to the users list
 	'''
@@ -501,7 +576,7 @@ def create_player(pName):
 	
 		
 
-def create_new_game(gameDate=gdate):
+def createNewGame(gameDate=gdate):
 	'''
 	creates a new game with a default date of today
 	returns the newly created gameID
@@ -514,7 +589,7 @@ def create_new_game(gameDate=gdate):
 		print ("GameID {}".format(newGame.GameID))
 	return newGame.GameID
 
-def delete_old_game(GID):
+def deleteOldGame(GID):
 	'''
 	given a game ID, deletes all entries associated with that gameID
 	deletes from:

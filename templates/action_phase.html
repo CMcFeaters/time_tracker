@@ -9,7 +9,18 @@
 		<div class="activeFactionLabel">Active Faction: </div>
 		<div class="activeFaction">{{activeFaction.FactionName}} - ({{activeUser}})</div>
 		<div class="activeButton1"><button type="submit" name="action" value="end" class="longButton">End</button></div>
-		<div class="activeButton2"><button type="submit" name="action" value="pass" class="longButton">Pass</button></div>
+		<!-- logic dealing with strategy buttons-->
+		{% if activeFaction.StrategyStatus1<1 and activeFaction.StrategyStatus2<1 %}
+			<div class="activeButton2"><button type="submit" name="action" value="pass" class="longButton">Pass</button></div>
+		{% else %}
+			{% if activeFaction.StrategyStatus1==1%}
+				<div class="strategyButton1"><button type="submit" name="action" value="Strategy1" class="strategyButton">{{activeFaction.StrategyName1}}</button></div>
+			{% endif %}
+			{% if activeFaction.StrategyStatus2==1%}
+				<div class="strategyButton2"><button type="submit" name="action" value="Strategy2" class="strategyButton">{{activeFaction.StrategyName2}}</button></div>
+			{% endif %}
+		{% endif %}
+		<div class="combatCheckBox"><input type="checkbox" id="combat" name="combat" value="combat" class="largeCheckBox"><label for="combat">Combat</label></div>
 		<div class="undoButton"><button type="submit" name="action" value="undo" class="longButton">Undo</button></div>
 		<div class="faction_list">
 			<div> Init</div>

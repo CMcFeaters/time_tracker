@@ -5,11 +5,19 @@
 {% for faction in sFactions %}
 	<div class="strategy_box">
 		
-		<select name= "{{faction.FactionName}}" class="bigButton">
-			{% for initiative in initiatives %}
-				<option value= "{{initiative}}" SELECTED>{{initiative}}</option>"
-			{% endfor %}
-		</select>
+		{% if nFactions < 5  %}
+		
+			<select name= "{{faction.FactionName}}2" class="bigButton">
+				{% for initiative in initiatives %}
+					<option value= "{{initiative}}" SELECTED>{{initiative}}</option>"
+				{% endfor %}
+			</select>
+		{% endif %}
+			<select name= "{{faction.FactionName}}" class="bigButton">
+				{% for initiative in initiatives %}
+					<option value= "{{initiative}}" SELECTED>{{initiative}}</option>"
+				{% endfor %}
+			</select>
 		<div class="fName">{{ faction.FactionName }}</div> 
     </div>
 {% endfor %}

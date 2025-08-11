@@ -14,6 +14,12 @@ items used for the page header section
 	height:100px;
 }
 
+.strategyButton{
+	width:150px;
+	height:75px;
+	font-size: 1.5em;
+}
+
 .bigButton{
 	height:50px;
 	width:50px;
@@ -33,6 +39,10 @@ items used for the page header section
 .wideButton{
 	height: 50px;
 	width: 208px;
+}
+
+.largeCheckBox{
+	zoom:2;
 }
 /*misc flex*/
 .center{
@@ -79,6 +89,30 @@ items used for the page header section
 	justify-content: center;
 	justify-items: center;
 	align-items: center;
+}
+
+/* STrategic action*/
+.strategic_action{
+	display: grid;
+	grid-template-columns:208px 208px;
+	grid-auto-rows: 50px;
+	justify-content: center;
+	justify-items: center;
+	align-items: center;
+	gap: 10px;
+}
+
+.strategic_action .fName{
+	justify-self: end;
+}
+
+.strategic_action .pName{
+	justify-self: end;
+	color: silver;
+}
+
+.strategic_action .speakerButton{
+	justify-self: start;
 }
 
 /*create_game*/
@@ -142,7 +176,7 @@ items used for the page header section
 .header_box{
 	display: grid;
 	width:100%;
-	grid-template-columns: 100px 100px 100px 100px;
+	grid-template-columns: 100px 100px 100px;
 	grid-template-rows: 100px 50px;
 	align-items :center;
 	justify-content: center;
@@ -157,7 +191,7 @@ items used for the page header section
 	font: 25px Arial bold;
 	min-width: 0;
 	overflow: hidden;
-	justify-self: end;
+	justify-self: center;
 }
 .header_box .flavor{
 	font: 25px Arial bold;
@@ -216,26 +250,7 @@ items used for the page header section
 	width:33%;
 }
 
-/*faction list*/
-.active_grid .faction_list{
-	grid-area:x;
-	display:grid;
-	grid-template-columns: 50px 200px;/* 50px;*/
-	grid-template-rows:25 px;
-	justify-content: center;
-	justify-items: start;
-	align-items: start;
-}
 
-.active_grid .pass_list{
-	grid-area:y;
-	display:grid;
-	grid-template-columns: 50px 200px;/* 50px;*/
-	grid-template-rows:25 px;
-	justify-content: center;
-	justify-items: end;
-	align-items: end;
-}
 
 .pass{
 	color: silver;
@@ -254,20 +269,41 @@ items used for the page header section
 /* this section is for displaying the active faction and the next faction*/
 .active_grid{
 	display:grid;
-	grid-auto-columns: 200px;
+	grid-auto-columns: minmax(100px,auto);
 	grid-auto-rows:minmax(25px,auto);
+	justify-content: center;
+
+	/*align-items: start;*/
+	gap: 10px;
+	grid-template-areas:
+	"a a a a"
+	"b b b b"
+	"c c f g"
+	"x x y y"
+	"z z z z"
+	"z z z z"
+	"e e e e";
+}
+
+/*faction list*/
+.active_grid .faction_list{
+	grid-area:x;
+	display:grid;
+	grid-template-columns: 50px 200px;/* 50px;*/
+	grid-template-rows:25 px;
 	justify-content: center;
 	justify-items: start;
 	align-items: start;
-	gap: 10px;
-	grid-template-areas:
-	"a a"
-	"b b"
-	"c f"
-	"x y"
-	"e e";
 }
 
+.active_grid .pass_list{
+	grid-area:y;
+	display:grid;
+	grid-template-columns: 50px 200px;/* 50px;*/
+	grid-template-rows:25 px;
+	justify-content: center;
+	justify-items: end;
+}
 .active_grid .activeFactionLabel{
 	
 	grid-area:a;
@@ -295,9 +331,28 @@ items used for the page header section
 	justify-self: start;
 }
 
+.active_grid .combatCheckBox{
+	
+	grid-area:z;
+	justify-self: center;
+	align-items:center;
+}
+
 .active_grid .activeButton2{
 	
+	grid-area:g;
+	justify-self: end;
+}
+
+.active_grid .stratButton1{
+	
 	grid-area:f;
+	justify-self: end;
+}
+
+.active_grid .stratButton2{
+	
+	grid-area:g;
 	justify-self: end;
 }
 

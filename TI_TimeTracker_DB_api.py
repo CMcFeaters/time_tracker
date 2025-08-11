@@ -26,7 +26,7 @@ class Games(Base):
 	#relationship
 	GameFactions: Mapped[List["Factions"]]=relationship(back_populates="GamePlayed")
 	GameEvents: Mapped[List["Events"]]=relationship(back_populates="Game")	
-
+	#you need to remove this backlink to finish removing combat
 	GameCombats: Mapped[List["Combats"]]=relationship(back_populates="Game")	#backlink to combats table
 
 	
@@ -55,6 +55,12 @@ class Factions(Base):
 	Pass: Mapped[bool]=mapped_column(default=0)
 	Score: Mapped[int]=mapped_column(default=0)
 	UserName: Mapped[str]=mapped_column(String(30))
+	Strategy1: Mapped[Optional[int]]=mapped_column(default=0)	#the number of the first strategy card
+	Strategy2: Mapped[Optional[int]]=mapped_column(default=0)	#the number of the second strategy card
+	StrategyStatus1: Mapped[Optional[int]]=mapped_column(default=0)	#the status of the first strategy card: 1: not used, 0:used
+	StrategyStatus2: Mapped[Optional[int]]=mapped_column(default=0) #the status of the first strategy card: 1: not used, 0:used, -1: N/A
+	StrategyName1: Mapped[str]=mapped_column(String(30))
+	StrategyName2: Mapped[str]=mapped_column(String(30))
 	#relationships
 	GamePlayed: Mapped["Games"]=relationship(back_populates="GameFactions")
 	User: Mapped["Users"]=relationship(back_populates="FactionsPlayed")
@@ -97,7 +103,7 @@ class Events(Base):
 		Initiative - FactionName - MiscData (init number)
 		End/StartState - ends/starts a state StateData(state "Active","Combat","Pause")
 	'''
-
+#you need to remove this table from the DB to finish removing combats
 class Combats(Base):
 	__tablename__="combats"
 	#keys
@@ -116,7 +122,7 @@ class Combats(Base):
 	AggressorFaction: Mapped["Factions"]=relationship("Factions",foreign_keys=[Aggressor])
 	DefenderFaction: Mapped["Factions"]=relationship("Factions",foreign_keys=[Defender])
 	WinnerFaction: Mapped["Factions"]=relationship("Factions",foreign_keys=[Winner])
-	
+
 
 def clearAll():
 	Base.metadata.drop_all(engine)

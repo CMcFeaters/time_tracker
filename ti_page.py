@@ -1,5 +1,5 @@
 from flask import Flask, render_template, redirect, url_for,request
-from server_api import Session, updateInitiative, endPhase, adjustPoints, endTurn, newSpeaker, boolEvent, gameStop, changeState, delete_old_game, get_speaker_order, create_new_game,add_factions, create_player, undo_endTurn
+import server_api
 from sqlalchemy import select, and_
 from TI_TimeTracker_DB_api import Games, Users, Factions, Events, Combats
 import datetime
@@ -10,7 +10,8 @@ app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 #app.config["SQLALCHEMY_DATABSE_URI"]="mariadb+mariadbconnector://%s:%s@127.0.0.1:%s/%s"%(config['uname'],config['pw'],config['port'],config['db'])
 
-
+strategyNameDict={1:"Leadership",2:"Diplomacy",3:"Politics",4:"Construction",5:"Trade",6:"Warfare",7:"Technology",8:"Imperial",9:"None"}
+ 
 @app.route("/")
 def phase_selector():
 	#this reads the current game phase and redirects the user to the representative page
@@ -18,7 +19,7 @@ def phase_selector():
 		GID=get_active_game() #get teh active game ID or return to the welcome page
 		if GID=="no_active":
 			return redirect(url_for('welcome_page'))
-		with Session() as session:
+		with server_api.Session() as session:
 			print("ActiveID: %s"%GID)
 			state=session.scalars(select(Games.GameState).where(Games.GameID==GID)).first()
 			phase=session.scalars(select(Games.GamePhase).where(Games.GameID==GID)).first()
@@ -41,8 +42,9 @@ def phase_selector():
 					return redirect(url_for('error_phase'))
 			elif state=="Pause":
 				return redirect(url_for('game_pause'))
-			elif state=="Combat":
-				return redirect(url_for('game_combat'))
+			#remove combat
+			#elif state=="Combat":
+			#	return redirect(url_for('game_combat'))
 			else:
 				print ("State fuckup: %s"%state)
 				return redirect(url_for('error_phase'))
@@ -53,6 +55,7 @@ def welcome_page():
 	'''
 	this page displays a welcome screen for users allowing them to select an active game
 	future options: 
+		
 		view stats, or create a game
 		-view game stats
 		-view all time stats
@@ -64,14 +67,14 @@ def welcome_page():
 		Create new player option	
 	'''
 
-	with Session() as session:
+	with server_api.Session() as session:
 		games=session.scalars(select(Games).order_by(Games.GameID)).all()
 		if request.method=="POST":
 			
 			gameID=int(request.form['gameSelect'])
 			activeGame=session.scalars(select(Games).where(Games.GameID==gameID)).first()
 			activeGame.Active=1
-			session.commit()
+			server_api.Session.commit()
 			return phase_selector()
 		return render_template("welcome.html",games=games,cPhase="Welcome")
 
@@ -108,23 +111,23 @@ def create_game():
 					print(f'{faction} has multiple entries')
 					return(redirect(url_for('create_game')))
 		#get the player IDS from teh player names
-		playerIDs=[Session().scalars(select(Users.UserID).where(Users.UserName==player)).first() for player in players]
+		playerIDs=[server_api.Session().scalars(select(Users.UserID).where(Users.UserName==player)).first() for player in players]
 		#print(players)
 		#print(playerIDs)
 		#put it all into a single array of tuples (userID,(faction,order))
 		gameConfig=[(factions[i],(playerIDs[i],i+1)) for i in range(len(players))]
 		#print(gameConfig)
 		#create the game
-		gID=create_new_game()
+		gID=server_api.createNewGame()
 		#print(f'game created')
 		#add factions tot he game
-		add_factions(gID,gameConfig)
-		newSpeaker(gID,factions[0])
+		server_api.addFactions(gID,gameConfig)
+		server_api.newSpeaker(gID,factions[0])
 		#print(f'factions added')
 		return redirect(url_for('welcome_page'))
 
 	else:
-		with Session() as session:
+		with server_api.Session() as session:
 			players=session.scalars(select(Users.UserName)).all()
 			players.append('NA')
 			faction_choices=['Arborec','Argent Flight','Barony of Letnev','Clan of Saar','Council Keleres','Embers of Muaat','Emirates of Hacan','Empyrean','Federation of Sol',
@@ -140,7 +143,7 @@ def add_player():
 	'''
 	if request.method=="POST":
 		player=request.form.get("pName")
-		create_player(player)
+		server_api.createPlayer(player)
 		return redirect(url_for('welcome_page'))
 	
 	return render_template('add_player.html',cPhase="Welcome")
@@ -162,9 +165,9 @@ def delete_game():
 		else:
 			#else we are deleting it	
 			print(f'We are deleting game: {dGID}')
-			delete_old_game(int(dGID))
+			server_api.deleteOldGame(int(dGID))
 		return redirect(url_for('welcome_page'))
-	with Session() as session:
+	with server_api.Session() as session:
 		games=session.scalars(select(Games).order_by(Games.GameID)).all()
 	return render_template("delete.html",games=games,cPhase="Welcome")
 
@@ -176,11 +179,11 @@ def setup_phase():
 	users have the option to start the game go back to teh welcome screen
 	'''
 	GID=get_active_game()	#get teh active game
-	with Session() as session:
+	with server_api.Session() as session:
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()	#get all teh factions for the bottom element
 		if request.method=="POST":	#if they hit the "Start button"
 			
-			endPhase(GID,0) #end the setup phase
+			server_api.endPhase(GID,0) #end the setup phase
 			return phase_selector()
 		return render_template("setup_phase.html",factions=factions,cPhase="Setup", flavor="Phase")
 		
@@ -190,7 +193,7 @@ def viewGame_page(GID):
 	a page where users view the status of a single game
 	this will pump out all the relevant stats we want to see
 	'''
-	GID=get_active_game() #get teh active game ID or return to the welcome page
+	GID=get_active_game() #get teh acftive game ID or return to the welcome page
 	pass
 
 @app.route('/pause', methods=['GET','POST'])
@@ -202,7 +205,7 @@ def game_pause():
 		an event so that it has some resiliency 
 	'''
 	GID=get_active_game() #get teh active game ID or return to the welcome page
-	with Session() as session:
+	with server_api.Session() as session:
 		#get the state
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
 		state=session.scalars(select(Games.GameState).where(Games.GameID==GID)).first()
@@ -213,46 +216,48 @@ def game_pause():
 	If we want to change this we'll have to also address the "time tracking" function
 	'''
 	if request.method=="POST":
-		boolEvent(GID,"Pause",0)	#create an event the phase ended
-		changeState(GID,"Active")		#change the state back to action phase
+		server_api.boolEvent(GID,"Pause",0)	#create an event the phase ended
+		server_api.changeState(GID,"Active")		#change the state back to action phase
 		return phase_selector()
 	else:
 		#we can only enter the pause state from the action state
 		#otherwise go back to our current state
 		if state=="Active":  #first time we're here
-			boolEvent(GID,"Pause",1) 	#add the pause event
-			changeState(GID,"Pause")	#change the state
-		elif state=="Combat":	#we clicked puase while in combat, go to combat
-			return redirect(url_for('game_combat'))
+			server_api.boolEvent(GID,"Pause",1) 	#add the pause event
+			server_api.changeState(GID,"Pause")	#change the state
+		#remove option for combat state
+		#elif state=="Combat":	#we clicked puase while in combat, go to combat
+		#	return redirect(url_for('game_combat'))
 		return render_template("pause.html", cPhase="Paused", factions=factions, flavor="Game")	#if the state is pause or active, go to pause page
 
+# remove COMBAT PAGE
+'''
 @app.route('/combat', methods=['GET','POST'])
 def game_combat():
 	#pause page, underlying code creates a pause event
 	#page allows users to unpause or go through the end-game cycle
-	'''
-		NOTE: may want to add a "combat" state somewhere in the db  rather than just having it as
-		an event so that it has some resiliency 
-	'''
+	
+		#NOTE: may want to add a "combat" state somewhere in the db  rather than just having it as
+		#an event so that it has some resiliency 
 	#will have to initiate combat event (Default start/stop time will be "now")
 	#will have to stop combat event (need ot change devault stop time to "now")
 	
 	GID=get_active_game() #get teh active game ID or return to the welcome page
-	with Session() as session:	#get state and factions 
+	with server_api.Session() as session:	#get state and factions 
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
 		state=session.scalars(select(Games.GameState).where(Games.GameID==GID)).first()
 	
-	'''
-	if we are posting to this page, we are either aborting combat (draw/misclick) or completing combat
-	this determines what type of event we create and if we make an entry
-	in the combat table
-	'''
+	
+	#if we are posting to this page, we are either aborting combat (draw/misclick) or completing combat
+	#this determines what type of event we create and if we make an entry
+	#in the combat table
+	
 	if request.method=="POST":
 		activeCombat=session.scalars(select(Combats).where(and_(Games.GameID==GID,Combats.Active==1))).first()
 		if (request.form.get('action')):	#check if one of our action buttons was pressed
-			'''
-			the active combat is over, determine if we update participants or call it a draw
-			'''
+			
+			#the active combat is over, determine if we update participants or call it a draw
+			
 			
 			if(request.form['action']=="complete"):	#check if it was completed
 				print("combat completed")
@@ -266,24 +271,25 @@ def game_combat():
 					
 			activeCombat.Active=0		#end the combat active status
 			activeCombat.StopTime=datetime.datetime.now()
-			session.commit()
-			boolEvent(GID,"Combat",0)	#combat endevent
-			changeState(GID,"Active")	#Update teh game state
+			server_api.Session.commit()
+			server_api.boolEvent(GID,"Combat",0)	#combat endevent
+			server_api.changeState(GID,"Active")	#Update teh game state
 		return phase_selector()	#find our true page
 	else:
 		if state=="Active":	#combat can only be entered from active, otherwise we ignore
-			'''
-				create a new combat event, chagne stte to combat and create an entry in our
-				combat table
-			'''
-			boolEvent(GID,"Combat",1)	#update event
-			changeState(GID,"Combat")	#update state
-			session.add(Combats(GameID=GID))	#create a new combat event
-			session.commit()
+			
+			#	create a new combat event, chagne stte to combat and create an entry in our
+			#	combat table
+			
+			server_api.boolEvent(GID,"Combat",1)	#update event
+			server_api.changeState(GID,"Combat")	#update state
+			server_api.Session.add(Combats(GameID=GID))	#create a new combat event
+			server_api.Session.commit()
 		elif state=="Pause":	#we hit combat  while in pause
 			return redirect(url_for('game_pause'))	#return to pause page
 		return render_template("combat.html", cPhase="Glorious", factions=factions, flavor="Combat")	#go to the combat page (active/combat) state
 
+'''
 
 @app.route('/stop', methods=['GET'])
 def stop_game():
@@ -291,10 +297,10 @@ def stop_game():
 		This deactivates the current game and kicks you to the phase_select screen
 	'''
 	GID=get_active_game()
-	with Session() as session:
+	with server_api.Session() as session:
 		activeGame=session.scalars(select(Games).where(Games.GameID==GID)).first()
 		activeGame.Active=0
-		session.commit()
+		server_api.Session.commit()
 	return phase_selector()
 
 @app.route('/end', methods=['GET','POST'])
@@ -305,10 +311,10 @@ def end_game():
 	GID=get_active_game() #get teh active game ID or return to the welcome page
 	if request.method=='POST':
 		print("here")
-		gameStop(GID,request.form.get('winner'))
+		server_api.gameStop(GID,request.form.get('winner'))
 		return phase_selector()
 	else:
-		with Session() as session:
+		with server_api.Session() as session:
 			factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(and_(Factions.Score,Factions.TotalTime))).all()
 			return render_template("end_game.html",factions=factions, cPhase="End", flavor="It?")
 		
@@ -318,7 +324,7 @@ def game_winner():
 	this is the page you get when the game is oVER!
 	'''
 	GID=get_active_game() #get teh active game ID or return to the welcome page
-	with Session() as session:
+	with server_api.Session() as session:
 		winner=session.scalars(select(Games).where(Games.GameID==GID)).first()
 		winningFaction=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.FactionName==winner.GameWinner)).first()
 		uID=session.scalars(select(Factions.UserID).where(Factions.GameID==GID,Factions.FactionName==winner.GameWinner)).first()
@@ -331,7 +337,7 @@ def error_phase():
 	'''
 	default error page for when somethign goes wrong
 	'''
-	with Session() as session:
+	with server_api.Session() as session:
 		users=session.scalars(select(Users)).all()
 		#factions=session.scalars(select(Faction
 		return render_template("show_users.html",users=users)
@@ -345,7 +351,7 @@ def footer_update():
 	'''
 	GID=get_active_game() #get teh active game ID or return to the welcome page
 	if request.method=='POST':
-		with Session() as session:
+		with server_api.Session() as session:
 			factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
 			activeFaction=session.scalars(select(Factions).where(Factions.GameID==GID, Factions.Active==1)).first()
 			'''this section checks through the from results to determine if a button
@@ -355,14 +361,14 @@ def footer_update():
 				if request.form.get(faction.FactionName):
 					if request.form[faction.FactionName]=="speaker":
 						#select a new speaker
-						newSpeaker(GID,faction.FactionName)
+						server_api.newSpeaker(GID,faction.FactionName)
 					
 					elif(request.form[faction.FactionName]=="score"):
 						#add a point
-						adjustPoints(GID,faction.FactionName,1)
+						server_api.adjustPoints(GID,faction.FactionName,1)
 					if(request.form[faction.FactionName]=="correct"):
 						#remove a point
-						adjustPoints(GID,faction.FactionName,-1)
+						server_api.adjustPoints(GID,faction.FactionName,-1)
 	return phase_selector()
 
 @app.route("/action", methods=['GET','POST'])#here get/post
@@ -374,7 +380,7 @@ def action_phase():
 	GID=get_active_game() #get teh active game ID or return to the welcome page
 	if request.method=='POST':
 
-		with Session() as session:
+		with server_api.Session() as session:
 			'''
 			end/pass active factions turn
 			'''
@@ -382,17 +388,22 @@ def action_phase():
 			#figure out what we're doing and execute that
 			if(request.form.get('action')):
 				if(request.form['action']=="end"):
-					endTurn(GID,activeFaction.FactionName,0)
+					server_api.endTurn(GID,activeFaction.FactionName,0)
 				elif(request.form['action']=="pass"):
-					endTurn(GID,activeFaction.FactionName,1)
+					server_api.endTurn(GID,activeFaction.FactionName,1)
 					return(phase_selector())	#on everyone passing we will go to the next phase
 				elif(request.form['action']=="undo"):
-					print(f'Undoing turn for {activeFaction.FactionName}')
-					undo_endTurn(GID,activeFaction.FactionName)
-					print(f'Complete')
-					
+					#print(f'Undoing turn for {activeFaction.FactionName}')
+					server_api.undoEndTurn(GID,activeFaction.FactionName)
+					#print(f'Complete')
+				elif(request.form['action']=="Strategy1"):
+					print("strategy 1 pressed")
+					return redirect(url_for("strategic_action",strategy="1"))	#on everyone passing we will go to the next phase
+				elif(request.form['action']=="Strategy2"):
+					print("strategy 2 pressed")
+					return redirect(url_for("strategic_action",strategy="2"))	#on everyone passing we will go to the next phase
 
-	with Session() as session:
+	with server_api.Session() as session:
 		'''find the next faction or list none if there is no next'''
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
 		activeFaction=session.scalars(select(Factions).where(Factions.GameID==GID, Factions.Active==1)).first()
@@ -408,8 +419,8 @@ def action_phase():
 				i+=1
 			if i>len(factions):
 				nextFaction="None"
-		for faction in factions:
-			print(f'{faction.FactionName} total time: {faction.TotalTime}')
+		#for faction in factions:
+			#print(f'{faction.FactionName} total time: {faction.TotalTime}')
 			
 	return render_template("action_phase.html",factions=factions, activeUser=activeUser,activeFaction=activeFaction, nextFaction=nextFaction, cPhase="Action", flavor="Phase")
 		
@@ -419,18 +430,18 @@ def agenda_phase():
 	#manage agenda phase
 	GID=get_active_game() #get teh active game ID or return to the welcome page
 	if request.method=='POST':
-		with Session() as session:
+		with server_api.Session() as session:
 			factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.TableOrder)).all()
 			for faction in factions:
 				if request.form.get(faction.FactionName):
-					adjustPoints(GID,faction.FactionName,int(request.form.get(faction.FactionName)))
+					server_api.adjustPoints(GID,faction.FactionName,int(request.form.get(faction.FactionName)))
 			if request.form.get('action'):
-				endPhase(GID,0)
+				server_api.endPhase(GID,0)
 				return phase_selector()
 	
-	with Session() as session:
+	with server_api.Session() as session:
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
-		sFactions=get_speaker_order(GID,factions)
+		sFactions=server_api.getSpeakerOrder(GID)
 	return render_template("agenda_phase.html",factions=factions,sFactions=sFactions,cPhase="Agenda", flavor="Phase")
 
 
@@ -441,21 +452,53 @@ def status_phase():
 	'''
 	GID=get_active_game() #get teh active game ID or return to the welcome page
 	if request.method=='POST':
-		'''with Session() as session:
+		'''with server_api.Session() as session:
 			factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
 			for faction in factions:
 				if request.form.get(faction.FactionName):
-					adjustPoints(GID,faction.FactionName,int(request.form.get(faction.FactionName)))
+					server_api.adjustPoints(GID,faction.FactionName,int(request.form.get(faction.FactionName)))
 		'''
 		if request.form.get('action'):
-			endPhase(GID,0)
+			server_api.endPhase(GID,0)
 			return phase_selector()
 
-	with Session() as session:
+	with server_api.Session() as session:
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
 		
 	return render_template("status_phase.html",factions=factions,cPhase="Status",flavor="Phase")
 
+
+@app.route("/strategicAction", methods=['GET','POST'])
+def strategic_action():
+	'''
+		this page allows the user to select initiatives
+		must select different initiatives for each faction
+	'''
+	GID=get_active_game() #get teh active game ID or return to the welcome page
+	if request.method=="POST":
+		#identify who just finished:
+		currentFactionName=request.form["done"]
+		#need to update event log to capture end turn strat secondary
+		print(f'the faction finishing a strat action is: {currentFactionName}')
+		#find who the next faction is
+		sFactions=server_api.getSpeakerOrder(GID,True,True)#list of all starting factions
+		currentIndex=sFactions.index(request.form["done"])
+		nextIndex=(currentIndex+1)%4
+		print(f'the next faction is {sFactions[nextIndex]}')
+		#update event log to capture start turn secondary
+		return redirect(url_for("action_phase"))
+	else:
+		with server_api.Session() as session:
+			#get the old faction
+			strategy=request.args['strategy']
+			#factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
+			sFactions=server_api.getSpeakerOrder(GID,True)
+			activeFaction=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first()
+			if strategy=="1":
+				strategy=activeFaction.StrategyName1
+			else:
+				strategy=activeFaction.StrategyName2
+			return render_template("strategic_action.html", sFactions=sFactions, stratFaction=activeFaction,cPhase=strategy)
 
 @app.route("/strategy", methods=['GET','POST'])
 def strategy_phase():
@@ -466,31 +509,35 @@ def strategy_phase():
 	GID=get_active_game() #get teh active game ID or return to the welcome page
 	if request.method=="POST":
 		#here is where we'd check the initiatives, assign them, jump to action phase
-		initDict={}
-		with Session() as session:
-			factions=session.scalars(select(Factions.FactionName).where(Factions.GameID==GID)).all()
-			#need to display in speaker order
-			inits=[request.form.get(faction) for faction in factions]
-			
-			for faction in factions:
-				if inits.count(request.form.get(faction))>1:
+		initDict={}	#create a dict to store our strats in {faction:(strat1,strat2)}
+		with server_api.Session() as session:
+			factions=session.scalars(select(Factions.FactionName).where(Factions.GameID==GID)).all()	#get all factions
+			inits=[request.form.get(faction) for faction in factions]	#get inits (assuming 1 strat)
+			factions2=[faction+"2" for faction in factions]	#get factions list to access second set of strats stored in {faction}"2"
+			if len(factions)<5:
+				#if we are picking two strats, add the second set of strat selections
+				[inits.append(request.form.get(faction)) for faction in factions2]	#append second strat to inits
+				for faction in factions:
+					initDict[faction]=(int(request.form.get(faction)),int(request.form.get(faction+'2')))	#add second strat to our init dict
+			else:
+				for faction in factions:
+					initDict[faction]=(int(request.form.get(faction)),9)	#else, add 9s to our init dict to represent garbage
+					
+			#check to see if the same init is picked multiple times
+			for init in inits:
+				if inits.count(init)>1:
 					print("Initiative %s selected multiple times"%request.form.get(faction))
 					return redirect(url_for("strategy_phase"))
-				else:
-					#create our faction/init dict
-					initDict[faction]=request.form.get(faction)
-		updateInitiative(GID,initDict)	#update initiatives
-		endPhase(GID,0)	#update phase
+			
+		server_api.assignStrat(GID,initDict)	#update initiatives
+		server_api.endPhase(GID,0)	#update phase
 		return phase_selector() #move to action phase
 	else:
-		with Session() as session:
+		with server_api.Session() as session:
 			factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
-			sFactions=get_speaker_order(GID,factions)
+			sFactions=server_api.getSpeakerOrder(GID)
 			initiatives=range(1,9)
-			#factions: the normal setup of factions used for the footer
-			#iFactions: factions arranged by speaker order user for the display
-			#initiatives: a range of numbers 1-8 for selecting initiative
-			return render_template("strategy_phase.html",factions=factions, sFactions=sFactions, initiatives=initiatives, cPhase="Strategy", flavor="Phase")
+			return render_template("strategy_phase.html",factions=factions, nFactions=len(factions),sFactions=sFactions, initiatives=initiatives, cPhase="Strategy", flavor="Phase")
 
 def get_active_game():
 	'''
@@ -499,13 +546,13 @@ def get_active_game():
 		if multipe or 0 active, sets no active games and redirects to welcome page
 	'''
 	
-	with Session() as session:
+	with server_api.Session() as session:
 		activeGames=session.scalars(select(Games).where(Games.Active==1)).all()
 		if len(activeGames)>1:
 			#multiple active games detected.  close them all and revert them back to the menu
 			for game in activeGames:
 				game.Active=0
-			session.commit()
+			server_api.Session.commit()
 			print("Multiple Games")
 			return "no_active"
 		elif len(activeGames)==0:
@@ -514,6 +561,6 @@ def get_active_game():
 			return "no_active"
 		else:
 			#return just the active game
-			print("Active Game: %s"%activeGames[0].GameID)
+			#print("Active Game: %s"%activeGames[0].GameID)
 			return activeGames[0].GameID
 			
