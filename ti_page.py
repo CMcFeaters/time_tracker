@@ -392,7 +392,12 @@ def action_phase():
 			#figure out what we're doing and execute that
 			if(request.form.get('action')):
 				if(request.form['action']=="end"):
-					server_api.endTurn(GID,activeFaction.FactionName,0)
+					if (request.form.get('combat')):
+						print(f"Combat: {request.form['combat']} detected")
+						server_api.endTurn(GID,activeFaction.FactionName,0,3)
+					else:
+						print(f"No combat detected {request.form.get('combat')}")
+						server_api.endTurn(GID,activeFaction.FactionName,0)
 				elif(request.form['action']=="pass"):
 					server_api.endTurn(GID,activeFaction.FactionName,1)
 					return(phase_selector())	#on everyone passing we will go to the next phase

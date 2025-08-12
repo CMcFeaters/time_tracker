@@ -384,7 +384,7 @@ def findActiveStrat(GID):
 			return findNextSpeakerOrderByName(GID,stratEvent.FactionName)
 			
 
-def endTurn(GID,faction,fPass):
+def endTurn(GID,faction,fPass,misc=0):
 	'''
 	
 	ends a faction's turn, if it's a pass(1), updates passing
@@ -395,11 +395,12 @@ def endTurn(GID,faction,fPass):
 	ID next faction
 	update total time
 	call startTurn or, if all pass, end phase
+	Assigns MiscData to default 0.  Endturn miscdatas: 3-combat, 2-secondary strat, 1-primary strat
 	'''
 	passing=["EndTurn","PassTurn"]
 	#print(f'{faction} is {passing[fPass]}')
 	with Session() as session:
-		session.add(Events(GameID=GID,EventType=passing[fPass],FactionName=faction, Round=getRound(GID)))	#create the event
+		session.add(Events(GameID=GID,EventType=passing[fPass],MiscData=misc,FactionName=faction, Round=getRound(GID)))	#create the event
 		if fPass:
 			#print(f'Updating {faction} status to passing')
 			#session.scalars(select(Factions).where(Factions.FactionName==faction)).first().Pass=True
