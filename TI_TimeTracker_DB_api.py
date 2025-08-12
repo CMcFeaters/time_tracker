@@ -78,7 +78,7 @@ class Events(Base):
 	#data
 	EventTime: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())
 	EventType: Mapped[str]=mapped_column(String(30))
-	MiscData: Mapped[Optional[int]]
+	MiscData: Mapped[Optional[int]] #1,2,3 primary/secondary/combat on end turn| initiative on start state
 	PhaseData: Mapped[Optional[str]]=mapped_column(String(30))
 	StateData: Mapped[Optional[str]]=mapped_column(String(30))
 	Round: Mapped[Optional[int]]	#the round the event occured in

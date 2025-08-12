@@ -2,7 +2,7 @@
 "backend" interface for teh server.  Includes all the functions called by the server when accessing the system
 '''
 from TI_TimeTracker_DB_api import engine, Games, Users, Factions, Events, createNew, clearAll, Combats
-from sqlalchemy import select, or_, delete, update
+from sqlalchemy import select, or_, and_, delete, update
 from sqlalchemy.orm import sessionmaker
 import datetime as dt
 import bisect
@@ -75,11 +75,11 @@ def findNextSpeakerOrderByName(GID,factionName):
 	with Session() as session:
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
 		tFaction=[None]*len(factions)
-		bFact=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.FactionName==factionName)).first()
+		bFact=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.FactionName==factionName)).first()	#the current faction
 		for faction in factions:
 			tFaction[(faction.TableOrder-bFact.TableOrder)%len(factions)]=faction.FactionName
-		nextFaction=tFaction[(tFaction.index(nextFaction)+1)%len(tFaction)]
-	return tFaction		
+		nextFaction=tFaction[(tFaction.index(bFact.FactionName)+1)%len(tFaction)]
+	return nextFaction		
 
 def assignStrat(GID,stratDict):
 	'''
@@ -239,7 +239,7 @@ def phaseChangeDetails(GID,newPhase):
 		session.commit()
 			
 	#stop game needs to initiate a pause event if it's not already paused
-def changeState(GID,state):
+def changeState(GID,state,strat=0):
 	'''
 	updates the state of the current game.  creates an event to end the current state and start a new state.
 	new state is equal to "state" value passed into function
@@ -252,6 +252,18 @@ def changeState(GID,state):
 		currentGame.GameState=state	#update teh current game phase
 		session.commit()
 
+def changeStateStrat(GID,state,strat):
+	'''
+	updates the state of the current game when called for a strategic action.  creates an event to end the current state and start a new state tracking the strategic action
+	new state is equal to "state" value passed into function
+	'''
+	with Session() as session:
+		#get teh current game
+		currentGame=session.scalars(select(Games).where(Games.GameID==GID)).first()	#get teh current game
+		session.add(Events(GameID=GID,EventType="EndState",PhaseData=currentGame.GamePhase,StateData=currentGame.GameState, Round=getRound(GID)))	#get add an event to end teh current state
+		session.add(Events(GameID=GID,EventType="StartState",PhaseData=currentGame.GamePhase,StateData=state, MiscData=strat,Round=getRound(GID))) 	#add an event to start the current phase
+		currentGame.GameState=state	#update teh current game phase
+		session.commit()
 
 
 def endPhase(GID,gameover):
@@ -285,6 +297,12 @@ def endPhase(GID,gameover):
 	if not gameover:
 		startPhase(GID)
 
+def getFactions(GID):
+	'''
+		returns a list of the factions
+	'''
+	with Session() as session:
+		return session.scalars(select(Factions).where(Factions.GameID==GID)).all()
 def startTurn(GID,faction):
 	'''
 	starts a faction's turn
@@ -298,17 +316,73 @@ def startTurn(GID,faction):
 		session.add(Events(GameID=GID,EventType="StartTurn",FactionName=faction, Round=getRound(GID)))
 		session.commit()
 	
-def endStrat(GID,faction,state):
+def startStrat(GID,faction):
 	'''
-		ends a strategic action for a faction
-		state indicates if it's teh "primary" or "secondary" action that is ending
+		creates a start event for the given faction
 	'''
 	with Session() as session:
+		session.add(Events(GameID=GID,EventType="StartTurn",FactionName=faction,MiscData=2,Round=getRound(GID)))
+		session.commit()
+
+def closeStrat(GID):
+	'''
+		closes teh current strat in GID
+	'''
+	strat=findStrat(GID)	#find the strat in question
+	with Session() as session:
+		sFaction=session.scalars(select(Factions).where(Factions.GameID==GID,or_(Factions.Strategy1==strat[0],Factions.Strategy2==strat[0]))).first()	#find the faction related to this strat
+		session.add(Events(GameID=GID,EventType="StratEnd",Round=getRound(GID),MiscData=strat[0],FactionName=sFaction.FactionName))	#create a close event
+		if strat[0]==sFaction.Strategy1:	#find teh appropriate strat and show it as closed
+			sFaction.StrategyStatus1=0
+		else:
+			sFaction.StrategyStatus2=0
+		session.commit()
+	
+def endStrat(GID,faction):
+	'''
+		ends a strategic action for a faction
+		state indicates if it's teh 1 "primary" or 2 "secondary" action that is ending
+		returns the "next faction" factionname
+	'''
+	with Session() as session:
+		if session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first().FactionName==faction:	#if the calling faction is the active faction, it's aprimary
+			state=1
+		else:	#else it's a secondary
+			state=2
 		session.add(Events(GameID=GID,EventType="EndTurn",MiscData=state,FactionName=faction, Round=getRound(GID)))	#create the event either a primary or secondary strategy
 		session.commit()
-	#update this factions' time on the clock
-	updateTime(GID,faction)
+	updateTime(GID,faction) #update this factions' time on the clock
+
 	
+def findStrat(GID):
+	'''
+		returns the (num,name) strategy of the most recent state
+	'''
+	with Session() as session:
+		strat=session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="StartState",Events.StateData=="Strategic").order_by(Events.EventTime.desc())).first().MiscData
+		return (strat,strategyNameDict[strat])
+
+def findActiveStrat(GID):
+	'''
+		returns the name of whoever is up for the current strategic action
+		find all events that are stateStart strategic, startTurn 2, endturn  1 2
+		use the most recent event to determine who's next
+			if stateStart = active faction
+			if startturn 2 - that faction
+			if endturn - the next faction findNextSpeakerOrderByName(GID,thisfaction,name)
+	'''
+	with Session() as session:
+		stratEvent=session.scalars(select(Events).where((Events.GameID==GID)&(
+		((Events.EventType=="StartState") & (Events.StateData=="Strategic"))|
+		((Events.EventType=="StartTurn") & (Events.MiscData==2))|
+		((Events.EventType=="EndTurn") & ((Events.MiscData==1) | (Events.MiscData==2))))).order_by(Events.EventTime.desc())).first()	#find the strategic event that is driving our action
+		if stratEvent.EventType=="StartState":	#if it's teh startstate, that means it's the active faction
+			return session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first().FactionName
+		elif stratEvent.EventType=="StartTurn":	#if it's the start turn, that means it's the faction that started with "strategic action turn"
+			return stratEvent.FactionName
+		else:	#otherwise, it's an end event and it's the next person in speaker order
+			return findNextSpeakerOrderByName(GID,stratEvent.FactionName)
+			
 
 def endTurn(GID,faction,fPass):
 	'''

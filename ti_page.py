@@ -42,6 +42,8 @@ def phase_selector():
 					return redirect(url_for('error_phase'))
 			elif state=="Pause":
 				return redirect(url_for('game_pause'))
+			elif state=="Strategic":
+				return redirect(url_for('strategic_action'))
 			#remove combat
 			#elif state=="Combat":
 			#	return redirect(url_for('game_combat'))
@@ -74,7 +76,7 @@ def welcome_page():
 			gameID=int(request.form['gameSelect'])
 			activeGame=session.scalars(select(Games).where(Games.GameID==gameID)).first()
 			activeGame.Active=1
-			server_api.Session.commit()
+			session.commit()
 			return phase_selector()
 		return render_template("welcome.html",games=games,cPhase="Welcome")
 
@@ -228,6 +230,8 @@ def game_pause():
 		#remove option for combat state
 		#elif state=="Combat":	#we clicked puase while in combat, go to combat
 		#	return redirect(url_for('game_combat'))
+		elif state=="Strategic":	#we clicked puase while in strategic action, go to combat
+			return redirect(url_for('strategic_action'))
 		return render_template("pause.html", cPhase="Paused", factions=factions, flavor="Game")	#if the state is pause or active, go to pause page
 
 # remove COMBAT PAGE
@@ -271,7 +275,7 @@ def game_combat():
 					
 			activeCombat.Active=0		#end the combat active status
 			activeCombat.StopTime=datetime.datetime.now()
-			server_api.Session.commit()
+			session.commit()
 			server_api.boolEvent(GID,"Combat",0)	#combat endevent
 			server_api.changeState(GID,"Active")	#Update teh game state
 		return phase_selector()	#find our true page
@@ -284,7 +288,7 @@ def game_combat():
 			server_api.boolEvent(GID,"Combat",1)	#update event
 			server_api.changeState(GID,"Combat")	#update state
 			server_api.Session.add(Combats(GameID=GID))	#create a new combat event
-			server_api.Session.commit()
+			session.commit()
 		elif state=="Pause":	#we hit combat  while in pause
 			return redirect(url_for('game_pause'))	#return to pause page
 		return render_template("combat.html", cPhase="Glorious", factions=factions, flavor="Combat")	#go to the combat page (active/combat) state
@@ -300,7 +304,7 @@ def stop_game():
 	with server_api.Session() as session:
 		activeGame=session.scalars(select(Games).where(Games.GameID==GID)).first()
 		activeGame.Active=0
-		server_api.Session.commit()
+		session.commit()
 	return phase_selector()
 
 @app.route('/end', methods=['GET','POST'])
@@ -398,10 +402,14 @@ def action_phase():
 					#print(f'Complete')
 				elif(request.form['action']=="Strategy1"):
 					print("strategy 1 pressed")
-					return redirect(url_for("strategic_action",strategy="1"))	#on everyone passing we will go to the next phase
+					server_api.changeStateStrat(GID,"Strategic",activeFaction.Strategy1)
+					return(phase_selector())
+					#return redirect(url_for("strategic_action",strategy="1"))	#on everyone passing we will go to the next phase
 				elif(request.form['action']=="Strategy2"):
 					print("strategy 2 pressed")
-					return redirect(url_for("strategic_action",strategy="2"))	#on everyone passing we will go to the next phase
+					server_api.changeStateStrat(GID,"Strategic",activeFaction.Strategy2)
+					return(phase_selector())
+					#return redirect(url_for("strategic_action",strategy="2"))	#on everyone passing we will go to the next phase
 
 	with server_api.Session() as session:
 		'''find the next faction or list none if there is no next'''
@@ -473,32 +481,47 @@ def strategic_action():
 	'''
 		this page allows the user to select initiatives
 		must select different initiatives for each faction
+		need something to bounce you out of here if you're in the wrong state
 	'''
 	GID=get_active_game() #get teh active game ID or return to the welcome page
 	if request.method=="POST":
 		#identify who just finished:
-		currentFactionName=request.form["done"]
-		#need to update event log to capture end turn strat secondary
-		print(f'the faction finishing a strat action is: {currentFactionName}')
-		#find who the next faction is
-		sFactions=server_api.getSpeakerOrder(GID,True,True)#list of all starting factions
-		currentIndex=sFactions.index(request.form["done"])
-		nextIndex=(currentIndex+1)%4
-		print(f'the next faction is {sFactions[nextIndex]}')
-		#update event log to capture start turn secondary
-		return redirect(url_for("action_phase"))
-	else:
-		with server_api.Session() as session:
-			#get the old faction
-			strategy=request.args['strategy']
-			#factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
-			sFactions=server_api.getSpeakerOrder(GID,True)
-			activeFaction=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first()
-			if strategy=="1":
-				strategy=activeFaction.StrategyName1
-			else:
-				strategy=activeFaction.StrategyName2
-			return render_template("strategic_action.html", sFactions=sFactions, stratFaction=activeFaction,cPhase=strategy)
+		#create finished event for whoever just finished
+		#find who's next 
+		#check if they are the activefaction (e.g., we looped)
+		#if no:
+			#startstrat for next
+			#reload page with them as next
+		#if yes:
+			#change to state to active
+			#find next faction
+			#start turn next faction
+			#update Strat Status
+			#return to phase selector
+		currentFactionName=request.form["done"]	#identify who finished
+		server_api.endStrat(GID,currentFactionName)	#create end event
+		nextFaction=server_api.findActiveStrat(GID)	#identify whos next, should give us the end-find next sequence
+		if nextFaction==server_api.Session().scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first().FactionName:	#if the next faction is the currently active faction, we're done
+			server_api.closeStrat(GID)	#update the strat card status to 0 (done)
+			nextFaction=server_api.findNext(GID)	#find the next faction
+			server_api.startTurn(GID,nextFaction)	#set the next faction as active, and initiate a start turn event
+			server_api.changeState(GID,"Active")	#update the state, we're done with strategic
+			return(phase_selector())	#phase select next section
+		else:	#move on to the next faction
+			server_api.startStrat(GID,nextFaction)
+	
+	#if we are "get" it's the first time we're in the session, the action is to the active player to complete their s
+	#strategic action.
+	#here we find teh active player, load up the screen with stratFaction as activeFaction
+	with server_api.Session() as session:
+		#get the old faction
+		factions=server_api.getFactions(GID)
+		strategy=server_api.findStrat(GID)[1]	#identify the strategy we're using
+		#factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
+		sFactions=server_api.getSpeakerOrder(GID,True)	#line up the factions in the correct order
+		activeFaction=server_api.findActiveStrat(GID)	#find out who's up
+		print(f'Active Faction: {activeFaction} for game {GID}')
+		return render_template("strategic_action.html", factions=factions,sFactions=sFactions, stratFaction=activeFaction,cPhase=strategy)
 
 @app.route("/strategy", methods=['GET','POST'])
 def strategy_phase():
@@ -552,7 +575,7 @@ def get_active_game():
 			#multiple active games detected.  close them all and revert them back to the menu
 			for game in activeGames:
 				game.Active=0
-			server_api.Session.commit()
+			session.commit()
 			print("Multiple Games")
 			return "no_active"
 		elif len(activeGames)==0:

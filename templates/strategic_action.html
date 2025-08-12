@@ -5,11 +5,11 @@
 {% for faction in sFactions %}
 	<div class="strategic_action">
 			
-			{% if faction.FactionName==stratFaction.FactionName %}
-				<div class="fName">{{ faction.FactionName }}</div> 
+			{% if faction.FactionName==stratFaction %}
+				<div class="fName">{{ faction.FactionName }} - ({{faction.UserName}})</div> 
 				<button type="submit" name="done" value="{{faction.FactionName}}" class="speakerButton">Done</button>
 			{% else %}
-				<div class="pName">{{ faction.FactionName }}</div> 
+				<div class="pName">{{ faction.FactionName }}- ({{faction.UserName}})</div> 
 			{% endif %}
     </div>
 {% endfor %}
@@ -17,4 +17,4 @@
 </div>
 </form>
 <br><br>
-{% endblock %}
+{% endblock content %}
