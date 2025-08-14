@@ -507,6 +507,10 @@ def strategic_action():
 		server_api.endStrat(GID,currentFactionName)	#create end event
 		nextFaction=server_api.findActiveStrat(GID)	#identify whos next, should give us the end-find next sequence
 		if nextFaction==server_api.Session().scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first().FactionName:	#if the next faction is the currently active faction, we're done
+			'''
+				this current has 3 updates done at different phases.  all of these updates need to execute and should be atomic (they all work or they don't coccur)
+				to preserve the state of the system
+			'''
 			server_api.closeStrat(GID)	#update the strat card status to 0 (done)
 			nextFaction=server_api.findNext(GID)	#find the next faction
 			server_api.startTurn(GID,nextFaction)	#set the next faction as active, and initiate a start turn event

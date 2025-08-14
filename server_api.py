@@ -2,7 +2,7 @@
 "backend" interface for teh server.  Includes all the functions called by the server when accessing the system
 '''
 from TI_TimeTracker_DB_api import engine, Games, Users, Factions, Events, createNew, clearAll, Combats
-from sqlalchemy import select, or_, and_, delete, update
+from sqlalchemy import select, or_, and_, delete, update, insert
 from sqlalchemy.orm import sessionmaker
 import datetime as dt
 import bisect
@@ -353,6 +353,19 @@ def endStrat(GID,faction):
 		session.commit()
 	updateTime(GID,faction) #update this factions' time on the clock
 
+
+def massUpdate(GID,stmts):
+	'''
+		this function receives a batch of statements to be updated. the statements are executed then committed
+		stmts: list of update statements
+		
+	'''
+	with Session() as session:
+		for stmt in stmts:
+			print(f'Executing statment: {stmt}')
+			session.execute(stmt)
+		session.commit()
+	
 	
 def findStrat(GID):
 	'''
@@ -695,11 +708,6 @@ def getRound(GID):
 
 
 #####################helper functions for initial testing####################
-def turnHelper(GID,passer):
-	with Session() as session:
-		activeFact=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==True)).first().FactionName
-		sleep(1)
-		endTurn(GID,activeFact,passer)
 
 		
 def createNewUser(GID,uName):
@@ -719,7 +727,6 @@ def createUsers():
 		session.add(Users(UserName="Hythem"))
 		session.commit()
 		
-
 
 def initiativeEvent(GID):
 	#used for starting initiatives (deprecate)
@@ -771,19 +778,6 @@ def findRound(GID,eventID):
 		print(f'Round starts: {roundStartEID}\nEvent {eventID} Instertion Index: {nextIndex-1} EventRound: {roundStarts[nextIndex-1].MiscData}')
 		return roundStarts[nextIndex-1].MiscData
 
-def roundMaker(GID):
-	'''
-	temporary script adding rounds to all of hte events in game 1
-	'''
-	with Session() as session:
-		#stmt=(update(Events).where(Events.GameID==GID)).values(Round=findRound(GID,Events.EventID))#findRound(Events.GameID,Events)))
-		#print(stmt)
-		events=session.scalars(select(Events).filter(Events.GameID==GID)).all()
-		for event in events:
-			print(event)
-			event.Round=findRound(GID,event.EventID) 
-		session.commit()
-	
 
 if __name__=="__main__":
 	if len(sys.argv)>1:
