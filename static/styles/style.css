@@ -115,6 +115,10 @@ items used for the page header section
 	justify-self: start;
 }
 
+.strategic_action .undoButton{
+	justify-self: end;
+}
+
 /*create_game*/
 .create_game_page{
 	display: grid;

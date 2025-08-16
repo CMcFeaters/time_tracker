@@ -2,20 +2,22 @@
 {% block content %}
 <form class="form-inline" method="POST" action="{{url_for('strategic_action')}}">
 <div class="form-group">
-{% for faction in sFactions %}
-	<div class="strategic_action">
-			
-			{% if faction.FactionName==stratFaction %}
-				<div class="fName">{{ faction.FactionName }} - ({{faction.UserName}})</div> 
-				<button type="submit" name="action" value="{{faction.FactionName}}" class="speakerButton">Done</button>
-			{% else %}
-				<div class="pName">{{ faction.FactionName }}- ({{faction.UserName}})</div> 
-			{% endif %}
-    </div>
-{% endfor %}
 
+	<div class="strategic_action">
+			{% for faction in sFactions %}
+				{% if faction.FactionName==stratFaction %}
+					<div class="fName">{{ faction.FactionName }} - ({{faction.UserName}})</div> 
+					<button type="submit" name="action" value="{{faction.FactionName}}" class="speakerButton">Done</button>
+				{% else %}
+					<div class="pName">{{ faction.FactionName }}- ({{faction.UserName}})</div> 
+					<div></div>
+				{% endif %}
+
+			{% endfor %}
+		<div class="undoButton"><button type="submit" name="action" value="undo" class="longButton">Undo</button></div>
+	</div>
 </div>
-<div class="undoButton"><button type="submit" name="action" value="undo" class="longButton">Undo</button></div>
+
 </form>
 <br><br>
 {% endblock content %}
