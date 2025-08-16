@@ -1,7 +1,7 @@
 '''
 "backend" interface for teh server.  Includes all the functions called by the server when accessing the system
 '''
-from TI_TimeTracker_DB_api import engine, Games, Users, Factions, Events, createNew, clearAll, Combats
+from TI_TimeTracker_DB_api import engine, Games, Users, Factions, Events, createNew, clearAll, Combats, Base
 from sqlalchemy import select, or_, and_, delete, update, insert
 from sqlalchemy.orm import sessionmaker
 import datetime as dt
@@ -24,7 +24,7 @@ def massUpdate(GID,stmts):
 	'''
 	with Session() as session:
 		for stmt in stmts:
-			print(f'Executing statment: {stmt}')
+			#print(f'Executing statment: {stmt}')
 			session.execute(stmt)
 		session.commit()
 	
@@ -112,7 +112,7 @@ def findRound(GID,eventID):
 		roundStarts=session.scalars(select(Events).where(Events.EventType=="StartRound",Events.GameID==GID).order_by(Events.EventID)).all()
 		roundStartEID=[start.EventID for start in roundStarts]
 		nextIndex=bisect.bisect_left(roundStartEID,eventID)
-		print(f'Round starts: {roundStartEID}\nEvent {eventID} Instertion Index: {nextIndex-1} EventRound: {roundStarts[nextIndex-1].MiscData}')
+		#print(f'Round starts: {roundStartEID}\nEvent {eventID} Instertion Index: {nextIndex-1} EventRound: {roundStarts[nextIndex-1].MiscData}')
 		return roundStarts[nextIndex-1].MiscData
 
 def findNext(GID,fwd_bwd=1):
@@ -126,7 +126,7 @@ def findNext(GID,fwd_bwd=1):
 	with Session() as session:
 		#activeFactions contains the list of factions that haven't passed
 		activeFactions=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Pass==0).order_by(Factions.Initiative)).all()
-		print([faction.FactionName for faction in activeFactions])
+		#print([faction.FactionName for faction in activeFactions])
 		if len(activeFactions)==0:	
 			#if no one is active, clear the active faction and return "none"
 			session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==True)).first().Active=False
@@ -155,7 +155,7 @@ def findNext(GID,fwd_bwd=1):
 			
 			#identify the factions whos turn it should be
 			nextFaction=activeFactions[nextIndex].FactionName #get teh name to return
-			print(f'Next faction: {nextFaction}')
+			#print(f'Next faction: {nextFaction}')
 			#undo the current active faction
 			currentFaction.Active=False
 			#assign the identified faction as active
@@ -265,7 +265,6 @@ def updateTime(GID,faction,fwd_bwd=1):
 		
 		#subtract out any pauses/combats
 		turnTime-=getPauseTime(GID,turnStart.EventTime)
-		#print("%s turn time: %s"%(faction,turnTime))
 		#find the faction we're doing the time modification for
 		actFact=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.FactionName==faction)).first()
 		
@@ -276,17 +275,50 @@ def updateTime(GID,faction,fwd_bwd=1):
 		else:
 			#print(f'adding {faction} time by {turnTime} from {actFact.TotalTime} to {actFact.TotalTime+turnTime}')
 			session.execute(update(Factions).where(Factions.GameID==GID,Factions.FactionName==faction).values(TotalTime=actFact.TotalTime+turnTime))
-		#if undo:
-			#actFact.TotalTime-=turnTime
-		#else:
-			#normal add
-			#actFact.TotalTime+=turnTime
-		#print(f'{actFact.FactionName} adding {turnTime} to total time {actFact.TotalTime}')
+
 		session.commit()
+
+
+def undoEndStrat(GID):
+	'''
+		this button can only be pressed on the Strategic Action Screen
+		it should follow the nextStrategicAction logic
+			if startstate = 
+				'state=active
+				'undo-start state strategic
+				'undo-end state active
+				return to phase selector
+				
+			if startturn 2 - the previous "end turn 1/2" faction
+				'undo-startturn -2
+				'endo-endturn 1 or 2
+				'subtract time
+				return phase selector
+	'''
+	with Session() as session:
+		stratEvent=session.scalars(select(Events).where((Events.GameID==GID)&(
+		((Events.EventType=="StartState") & (Events.StateData=="Strategic"))|
+		((Events.EventType=="StartTurn") & (Events.MiscData==2)))).order_by(Events.EventTime.desc())).first()	#find the strategic event that is driving our action
+		#print(f'SE: {stratEvent.EventID} PE: {stratEvent.EventID-1}')
+		if (stratEvent.EventType!="StartState"):
+			prevFaction=session.scalars(select(Events).where(Events.GameID==GID,Events.EventID==stratEvent.EventID-1, Events.EventType=="EndTurn")).first().FactionName	#if it's a start turn event, we want the end turn faction name
+	
+	if (stratEvent.EventType=="StartState") & (stratEvent.StateData=="Strategic"):#we accidentally entered into strat mode
+		stmt=[update(Games).where(Games.GameID==GID).values(GameState="Active")]	#change the game state
+		stmt.append(update(Events).where(Events.GameID==GID, Events.EventID==stratEvent.EventID).values(EventType="Correct-StartState"))	#change the start state envent
+		stmt.append(update(Events).where(Events.GameID==GID, Events.EventType=="EndState",Events.EventID==stratEvent.EventID-1).values(EventType="Correct-EndState"))	#change the previous event, which is the end state
+		stmt.append(insert(Events).values(GameID=GID,EventType="CorrectTurn",Round=getRound(GID)))	#log the turn correction
+		massUpdate(GID,stmt)	#perform a mass update
+	elif (stratEvent.EventType=="StartTurn") & ((stratEvent.MiscData==2) | (stratEvent.MiscData==1)):	#we accidentally ended a turn in strat mode
+		updateTime(GID,prevFaction,-1)	
+		stmt=[update(Events).where(Events.GameID==GID, Events.EventID==stratEvent.EventID).values(EventType="Correct-StartTurn")]	#change the start state envent
+		stmt.append(update(Events).where(Events.GameID==GID, Events.EventType=="EndTurn",Events.EventID==stratEvent.EventID-1).values(EventType="Correct-EndTurn"))
+		stmt.append(insert(Events).values(GameID=GID,EventType="CorrectTurn",Round=getRound(GID)))	#log the turn correction
+		massUpdate(GID,stmt)	#perform a mass update
 		
 def undoEndTurn(GID,faction):
 	'''
-	
+	#need to update to reflect strategic Action
 	undos ending a faction's turn, if it's undoing a pass(1), updates passing
 	reverts to the previous faction's turn
 	prevent going beyond start of round
@@ -300,46 +332,61 @@ def undoEndTurn(GID,faction):
 	
 	'''
 	#check to see if we're at the top of the round, e.g., we can't undo wihtout going back a round
-	passing=["EndTurn","PassTurn"]
+	passing=["EndTurn","PassTurn","StratEnd"]	#add StratEnd
 	#print(f'-Starting undo for {faction} in game {GID}')
 	with Session() as session:
+		
+		####we need to unwind this knot
 		#print(f'-Gathering Data')
 		curRound=getRound(GID)
 		#print(f'-Current round: {GID}')
-		prev_end=session.scalars(select(Events).where(Events.GameID==GID,or_(Events.EventType==passing[0],Events.EventType==passing[1])).order_by(Events.EventTime.desc())).first()
-		
+		prev_end1=session.scalars(select(Events).where(Events.GameID==GID,or_(Events.EventType==passing[0],Events.EventType==passing[1],Events.EventType==passing[2])).order_by(Events.EventID.desc())).all()
+		for thing in prev_end1[:3]:
+			print(f'{thing.EventID} - {thing.EventType}')
+		prev_end=prev_end1[0]
+		prev_fact=prev_end.FactionName	#avoid lazy loading
+		prev_EID=prev_end.EventID
+		prev_EType=prev_end.EventType
+		print(f'Undo Type: {prev_EType} - {prev_end.EventType}')
 		if prev_end is None:
 			#print(f'-Cant go beyond first round')
 			return "None"
 		elif curRound>prev_end.Round:
 			#print(f'-previous round {prev_end.Round} less than current {curRound}')
 			return "None"
-		#else:
-		#	print(f'-previous round {prev_end.Round} equal to current {curRound}')
-		#print(f'-Last event {prev_end.EventType} by {prev_end.FactionName} in round {prev_end.Round} at {prev_end.EventTime}')
-	#update the total time to no longer reflect our turn	
-	
-	#add the correct turn event, undo pass if necessary
-	#print(f'-starting to unwind')
-	with Session() as session:
-		#create the event marking a turn correction ("CorrectTurn")
-		#print(f'-Adding CorrectTurn event for {faction} in round {getRound(GID)}')
-		session.add(Events(GameID=GID,EventType="CorrectTurn",FactionName=faction, Round=getRound(GID)))	
-		#if we're undoing a pass, update the pass status of the player that passed
+			
+		#do major gamestate updates
+		session.add(Events(GameID=GID,EventType="CorrectTurn", Round=getRound(GID)))	#create the event marking a turn correction ("CorrectTurn"
 		#print(f'-Checking for pass')
-		if prev_end.EventType=="PassTurn":
+		if prev_end.EventType=="PassTurn":		#if we're undoing a pass, update the pass status of the player that passed
 			#print(f'-Updating {prev_end.FactionName} status to not passing')
 			session.execute(update(Factions).where(Factions.GameID==GID,Factions.FactionName==prev_end.FactionName).values(Pass=False))
-			#find the previous faction, we do it here because above we ensure that if it was a pass, the pass has been undone and teh previous faction is in the available pool
-		#print(f'-Committing Changes')
+		elif prev_end.EventType=="StratEnd":	#if we're undoing a strategic action, it's here
+			print(f'STRATEGIC ACTION UNDO')
+			#find which faction strategy was previously used
+			if prev_end.MiscData==session.scalars(select(Factions).where(Factions.GameID==GID,Factions.FactionName==prev_end.FactionName)).first().Strategy1:
+				print(f'STRAT 1')
+				session.execute(update(Factions).where(Factions.GameID==GID,Factions.FactionName==prev_end.FactionName).values(StrategyStatus1=1))	#update that back to available
+			else:
+				print(f'STRAT 2')
+				session.execute(update(Factions).where(Factions.GameID==GID,Factions.FactionName==prev_end.FactionName).values(StrategyStatus2=1))	#update that back to available
+			print(f'Back to strat phase')
+			session.execute(update(Games).where(Games.GameID==GID).values(GameState="Strategic"))	#update the state back to strategic
+			session.execute(update(Events).where(Events.GameID==GID,Events.EventID==prev_end.EventID).values(EventType="Correct-StratEnd"))	#correct teh strategic action end
+			session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="StartState").order_by(Events.EventID.desc())).first().EventType="Correct-StartState"
+			session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="EndState").order_by(Events.EventID.desc())).first().EventType="Correct-EndState"
+			#add correction fo endstate
+			print(f'Find old data')
+			prev_end=session.scalars(select(Events).where(Events.GameID==GID,Events.EventID==prev_end.EventID-1,Events.EventType=="EndTurn")).first()	#update previous end to be the previous faciton's end turn (strat)
+			
+			prev_fact=prev_end.FactionName
+			prev_EID=prev_end.EventID
+			prev_EType=prev_end.EventType
+			print(f'{prev_EID} - {prev_fact} - {prev_EType}')
 		session.commit()
-	#find the previous faction
-	#print(f'finding previous faction')
-	#previousFaction=findNext(GID,-1)	#do i even need this if hte above prev_end works?
-	#print(f'-Prevoius Faction is {prev_end.FactionName}')
 	#update time here, now that we know the previous faction
-	print(f'-Updating the time for {prev_end.FactionName}')
-	updateTime(GID,prev_end.FactionName,-1)	
+	#print(f'-Updating the time for {prev_end.FactionName}')
+	updateTime(GID,prev_fact,-1)		#we need to find this again for stratEnd.  it's the end turn faction and it's prevend-1
 	#print(f'-Time updated')
 	#update the current turn facionts start turn and the previous turn factions end/pass turn recent start/endturn events
 	with Session() as session:
@@ -347,13 +394,14 @@ def undoEndTurn(GID,faction):
 		#faction is the active faction's name
 		print(f'-modifying start turn and active status for {faction}')
 		
-		last_start=session.scalars(select(Events).where(Events.GameID==GID,Events.FactionName==faction,Events.EventType=="StartTurn").order_by(Events.EventTime.desc())).first()
-		session.execute(update(Events).where(Events.EventID==last_start.EventID).values(EventType="Correct-StartTurn"))
-		session.execute(update(Factions).where(Factions.GameID==GID,Factions.FactionName==faction).values(Active=False))
+		last_start=session.scalars(select(Events).where(Events.GameID==GID,Events.FactionName==faction,Events.EventType=="StartTurn").order_by(Events.EventTime.desc())).first()	#find the last startturn (this will be now active)
+		session.execute(update(Events).where(Events.GameID==GID,Events.EventID==last_start.EventID).values(EventType="Correct-StartTurn"))	#clear the previous start tun
+		newActive=findNext(GID,-1)	#find's who was the previous active faction
+		session.execute(update(Factions).where(Factions.GameID==GID,Factions.FactionName==faction).values(Active=False))	#make the current active false (move to pass/end
 		#modify the "previous faction" end event
 		#print(f'-modifying {prev_end.EventType} and active status for {prev_end.FactionName}')
-		session.execute(update(Events).where(Events.EventID==prev_end.EventID).values(EventType="Correct-"+prev_end.EventType))
-		session.execute(update(Factions).where(Factions.GameID==GID,Factions.FactionName==prev_end.FactionName).values(Active=True))
+		session.execute(update(Events).where(Events.EventID==prev_EID).values(EventType="Correct-"+prev_EType))	#correct the previous end or pass turn
+		session.execute(update(Factions).where(Factions.GameID==GID,Factions.FactionName==newActive).values(Active=True))	#update the current active to prev
 		session.commit()
 	
 def endTurn(GID,faction,fPass,misc=0):
@@ -435,8 +483,9 @@ def endStrat(GID,faction):
 			state=1
 		else:	#else it's a secondary
 			state=2
-		session.add(Events(GameID=GID,EventType="EndTurn",MiscData=state,FactionName=faction, Round=getRound(GID)))	#create the event either a primary or secondary strategy
-		session.commit()
+		#session.add(Events(GameID=GID,EventType="EndTurn",MiscData=state,FactionName=faction, Round=getRound(GID)))	#create the event either a primary or secondary strategy
+		stmt=insert(Events).values(GameID=GID,EventType="EndTurn",MiscData=state,FactionName=faction, Round=getRound(GID))
+	massUpdate(GID,[stmt])
 	updateTime(GID,faction) #update this factions' time on the clock
 
 def assignStrat(GID,stratDict):
@@ -658,7 +707,6 @@ def createNewGame(gameDate=gdate):
 	creates a new game with a default date of today
 	returns the newly created gameID
 	'''
-	print("TeSt")
 	with Session() as session:
 		newGame=Games(GameDate=gameDate)
 		session.add(newGame)
@@ -746,52 +794,4 @@ if __name__=="__main__":
 	else:
 		#roundMaker(1)
 		print("safe mode enabled")
-
-
-	'''
-	initiativeEvent(GID)
-	print("setting initiative")
-	pauseEvent(True,GID)
-	print("Pause")
-	pauseEvent(False,GID)
-	print("UnPause")
-	fSpeaker(UF_Dict["Charlie"][0], GID)
-	print("new Speaker")
-	newSpeaker(UF_Dict["Sunny"][0],GID)
-	print("new Speaker")
-	adjustPoints(UF_Dict["Sunny"][0],2,GID)
-	print("adjust points up")
-	adjustPoints(UF_Dict["Sunny"][0],-1,GID)
-	print("adjust points down")
-	adjustPoints(UF_Dict["Nathan"][0],1,GID)
-	print("adjust points ")
-	endPhase(GID,0)
-	print("cycle phase 1")
-	print("Starting turns")
-	for i in range(0,10):
-		turnHelper(GID,0)
-		print("Ending turn %s at %s"%(i,dt.datetime.now()))
-
-	print("StartingPasses")
-	for i in range(0,6):
-		turnHelper(GID,1)
-		print("passing turn %s"%i)
-
-	endPhase(GID,0)
-	print("cycle phase 2")
-	endPhase(GID,0)
-	print("cycle phase 3")
-	endPhase(GID,0)
-	print("cycle phase 4")
-	endPhase(GID,0)
-	print("cycle phase 5")
-	endPhase(GID,0)
-	print("cycle phase 6")
-	endPhase(GID,0)
-	print("cycle phase 7")
-	endPhase(GID,0)
-	print("cycle phase 8")
-	gameStop(GID)
-	print("Game Over")
-	'''
 

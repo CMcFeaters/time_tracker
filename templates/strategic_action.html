@@ -7,7 +7,7 @@
 			
 			{% if faction.FactionName==stratFaction %}
 				<div class="fName">{{ faction.FactionName }} - ({{faction.UserName}})</div> 
-				<button type="submit" name="done" value="{{faction.FactionName}}" class="speakerButton">Done</button>
+				<button type="submit" name="action" value="{{faction.FactionName}}" class="speakerButton">Done</button>
 			{% else %}
 				<div class="pName">{{ faction.FactionName }}- ({{faction.UserName}})</div> 
 			{% endif %}

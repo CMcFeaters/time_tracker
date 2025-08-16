@@ -402,8 +402,9 @@ def action_phase():
 					server_api.endTurn(GID,activeFaction.FactionName,1)
 					return(phase_selector())	#on everyone passing we will go to the next phase
 				elif(request.form['action']=="undo"):
-					#print(f'Undoing turn for {activeFaction.FactionName}')
+					print(f'*******************Undoing turn for {activeFaction.FactionName}')
 					server_api.undoEndTurn(GID,activeFaction.FactionName)
+					return(phase_selector())
 					#print(f'Complete')
 				elif(request.form['action']=="Strategy1"):
 					print("strategy 1 pressed")
@@ -490,6 +491,10 @@ def strategic_action():
 	'''
 	GID=get_active_game() #get teh active game ID or return to the welcome page
 	if request.method=="POST":
+		if request.form['action']=='undo':
+			print(f'Undo Pressed: STRAT')
+			server_api.undoEndStrat(GID)
+			return redirect(url_for('phase_selector'))
 		#identify who just finished:
 		#create finished event for whoever just finished
 		#find who's next 
@@ -503,9 +508,10 @@ def strategic_action():
 			#start turn next faction
 			#update Strat Status
 			#return to phase selector
-		currentFactionName=request.form["done"]	#identify who finished
+		currentFactionName=server_api.findActiveStrat(GID)	#identify whos next, should give us the end-find next sequence
 		server_api.endStrat(GID,currentFactionName)	#create end event
 		nextFaction=server_api.findActiveStrat(GID)	#identify whos next, should give us the end-find next sequence
+		
 		if nextFaction==server_api.Session().scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first().FactionName:	#if the next faction is the currently active faction, we're done
 			'''
 				this current has 3 updates done at different phases.  all of these updates need to execute and should be atomic (they all work or they don't coccur)
@@ -526,10 +532,10 @@ def strategic_action():
 		#get the old faction
 		factions=server_api.getFactions(GID)
 		strategy=server_api.findStrat(GID)[1]	#identify the strategy we're using
-		#factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
+
 		sFactions=server_api.getSpeakerOrder(GID,True)	#line up the factions in the correct order
 		activeFaction=server_api.findActiveStrat(GID)	#find out who's up
-		print(f'Active Faction: {activeFaction} for game {GID}')
+		#print(f'Active Faction: {activeFaction} for game {GID}')
 		return render_template("strategic_action.html", factions=factions,sFactions=sFactions, stratFaction=activeFaction,cPhase=strategy)
 
 @app.route("/strategy", methods=['GET','POST'])
