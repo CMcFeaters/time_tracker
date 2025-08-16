@@ -302,7 +302,7 @@ def undoEndStrat(GID):
 		#print(f'SE: {stratEvent.EventID} PE: {stratEvent.EventID-1}')
 		if (stratEvent.EventType!="StartState"):
 			prevFaction=session.scalars(select(Events).where(Events.GameID==GID,Events.EventID==stratEvent.EventID-1, Events.EventType=="EndTurn")).first().FactionName	#if it's a start turn event, we want the end turn faction name
-	
+	#clean this up, we don't need to exit the session here.
 	if (stratEvent.EventType=="StartState") & (stratEvent.StateData=="Strategic"):#we accidentally entered into strat mode
 		stmt=[update(Games).where(Games.GameID==GID).values(GameState="Active")]	#change the game state
 		stmt.append(update(Events).where(Events.GameID==GID, Events.EventID==stratEvent.EventID).values(EventType="Correct-StartState"))	#change the start state envent
@@ -483,9 +483,10 @@ def endStrat(GID,faction):
 			state=1
 		else:	#else it's a secondary
 			state=2
-		#session.add(Events(GameID=GID,EventType="EndTurn",MiscData=state,FactionName=faction, Round=getRound(GID)))	#create the event either a primary or secondary strategy
-		stmt=insert(Events).values(GameID=GID,EventType="EndTurn",MiscData=state,FactionName=faction, Round=getRound(GID))
-	massUpdate(GID,[stmt])
+		session.add(Events(GameID=GID,EventType="EndTurn",MiscData=state,FactionName=faction, Round=getRound(GID)))	#create the event either a primary or secondary strategy
+		#stmt=insert(Events).values(GameID=GID,EventType="EndTurn",MiscData=state,FactionName=faction, Round=getRound(GID))
+		session.commit()
+	#massUpdate(GID,[stmt])
 	updateTime(GID,faction) #update this factions' time on the clock
 
 def assignStrat(GID,stratDict):
