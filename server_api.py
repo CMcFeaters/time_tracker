@@ -191,7 +191,7 @@ def findStrat(GID):
 		returns the (num,name) strategy of the most recent state
 	'''
 	with Session() as session:
-		strat=session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="StartState",Events.StateData=="Strategic").order_by(Events.EventTime.desc())).first().MiscData
+		strat=session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="StartState",Events.StateData=="Strategic").order_by(Events.EventID.desc())).first().MiscData
 		return (strat,strategyNameDict[strat])
 
 def findActiveStrat(GID):
@@ -207,7 +207,7 @@ def findActiveStrat(GID):
 		stratEvent=session.scalars(select(Events).where((Events.GameID==GID)&(
 		((Events.EventType=="StartState") & (Events.StateData=="Strategic"))|
 		((Events.EventType=="StartTurn") & (Events.MiscData==2))|
-		((Events.EventType=="EndTurn") & ((Events.MiscData==1) | (Events.MiscData==2))))).order_by(Events.EventTime.desc())).first()	#find the strategic event that is driving our action
+		((Events.EventType=="EndTurn") & ((Events.MiscData==1) | (Events.MiscData==2))))).order_by(Events.EventID.desc())).first()	#find the strategic event that is driving our action
 		if stratEvent.EventType=="StartState":	#if it's teh startstate, that means it's the active faction
 			return session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first().FactionName
 		elif stratEvent.EventType=="StartTurn":	#if it's the start turn, that means it's the faction that started with "strategic action turn"
@@ -298,7 +298,7 @@ def undoEndStrat(GID):
 	with Session() as session:
 		stratEvent=session.scalars(select(Events).where((Events.GameID==GID)&(
 		((Events.EventType=="StartState") & (Events.StateData=="Strategic"))|
-		((Events.EventType=="StartTurn") & (Events.MiscData==2)))).order_by(Events.EventTime.desc())).first()	#find the strategic event that is driving our action
+		((Events.EventType=="StartTurn") & (Events.MiscData==2)))).order_by(Events.EventID.desc())).first()	#find the strategic event that is driving our action
 		#print(f'SE: {stratEvent.EventID} PE: {stratEvent.EventID-1}')
 		if (stratEvent.EventType!="StartState"):
 			prevFaction=session.scalars(select(Events).where(Events.GameID==GID,Events.EventID==stratEvent.EventID-1, Events.EventType=="EndTurn")).first().FactionName	#if it's a start turn event, we want the end turn faction name
@@ -394,7 +394,7 @@ def undoEndTurn(GID,faction):
 		#faction is the active faction's name
 		print(f'-modifying start turn and active status for {faction}')
 		
-		last_start=session.scalars(select(Events).where(Events.GameID==GID,Events.FactionName==faction,Events.EventType=="StartTurn").order_by(Events.EventTime.desc())).first()	#find the last startturn (this will be now active)
+		last_start=session.scalars(select(Events).where(Events.GameID==GID,Events.FactionName==faction,Events.EventType=="StartTurn").order_by(Events.EventID.desc())).first()	#find the last startturn (this will be now active)
 		session.execute(update(Events).where(Events.GameID==GID,Events.EventID==last_start.EventID).values(EventType="Correct-StartTurn"))	#clear the previous start tun
 		newActive=findNext(GID,-1)	#find's who was the previous active faction
 		session.execute(update(Factions).where(Factions.GameID==GID,Factions.FactionName==faction).values(Active=False))	#make the current active false (move to pass/end
