@@ -261,7 +261,7 @@ def updateTime(GID,faction,fwd_bwd=1):
 		
 		turnStart=session.scalars(select(Events).where(Events.GameID==GID,Events.FactionName==faction,Events.EventType=="StartTurn").order_by(Events.EventID.desc())).first()	#most recent start
 		turnStop=session.scalars(select(Events).where(Events.GameID==GID,Events.FactionName==faction,or_(Events.EventType=="EndTurn",Events.EventType=="PassTurn")).order_by(Events.EventID.desc())).first() #most recent stop
-		turnTime=turnStop.EventTime-turnStart.EventTime
+		turnTime=(turnStop.EventTime-turnStart.EventTime).total_seconds()	#we are now doing total seconds and storing as an int, rather than a datetime
 		
 		#subtract out any pauses/combats
 		turnTime-=getPauseTime(GID,turnStart.EventTime)
@@ -772,8 +772,18 @@ def restart():
 	clearAll()
 	createNew()
 
-
-
+'''
+def timeConvert():
+	baseT=dt.datetime(1970,1,1)
+	with Session() as session:
+		times=session.scalars(select(Factions)).all()
+		for t in times:
+			#tSec=(t.TotalTime-baseT).total_seconds()
+			tSec=t.TotalTime.total_seconds()
+			print(f'{t.GameID} - {t.FactionName} - {tSec} - {int(tSec/3600)}:{int((tSec%3600)/60):02}:{int((tSec%3600)%60):02} --- {t.TotalTime}')
+			t.tempTime=tSec
+		session.commit()
+'''
 
 if __name__=="__main__":
 	if len(sys.argv)>1:
@@ -782,7 +792,8 @@ if __name__=="__main__":
 		safemode="fuck you"
 	#just a little helper function
 	if safemode=="off":
-		restart()
+		#restart()
+		#timeConvert()
 		print("restart complete")
 		#new_game(1)
 		#print("new Game created")

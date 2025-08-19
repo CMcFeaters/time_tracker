@@ -51,7 +51,7 @@ class Factions(Base):
 	TableOrder: Mapped[int] =mapped_column(default=0)
 	Speaker: Mapped[bool] =mapped_column(default=0)
 	Initiative: Mapped[int] =mapped_column(default=0)
-	TotalTime: Mapped[datetime.timedelta] =mapped_column(default=datetime.timedelta(seconds=0))
+	TotalTime: Mapped[Optional[int]]=mapped_column(default=0)
 	Pass: Mapped[bool]=mapped_column(default=0)
 	Score: Mapped[int]=mapped_column(default=0)
 	UserName: Mapped[str]=mapped_column(String(30))
@@ -61,6 +61,8 @@ class Factions(Base):
 	StrategyStatus2: Mapped[Optional[int]]=mapped_column(default=0) #the status of the first strategy card: 1: not used, 0:used, -1: N/A
 	StrategyName1: Mapped[str]=mapped_column(String(30))
 	StrategyName2: Mapped[str]=mapped_column(String(30))
+
+	
 	#relationships
 	GamePlayed: Mapped["Games"]=relationship(back_populates="GameFactions")
 	User: Mapped["Users"]=relationship(back_populates="FactionsPlayed")

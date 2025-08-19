@@ -2,18 +2,27 @@
 {% block content %}
 <title>Congratulations</title>
 <h1> Congratulations {{user.UserName}}</h1>
+
+	{% set hrs=(winningFaction.TotalTime/3600) | int%}
+	{% set mins=((winningFaction.TotalTime%3600)/60) | int%}
+	{% set secs=((winningFaction.TotalTime%3600)%60) | int%}
+	
 <div class="win_box">
 <div class="faction"> {{ winningFaction.FactionName }} </div>
 <div class="score"> Score: {{ winningFaction.Score }} </div>
-<div class="time">Total Time (s): {{winningFaction.TotalTime}}</div>
+<div class="time">Total Time (s): {{hrs}}:{{"%02d"|format(mins)}}:{{"%02d"|format(secs)}}</div>
 </div>
 
 <h2> Skill Issues </h2>
 {% for faction in factions %}
+	{% set hrs=(faction.TotalTime/3600) | int}
+	{% set mins=((faction.TotalTime%3600)/60) | int}
+	{% set secs=((faction.TotalTime%3600)%60) | int}
+	
 <div class="win_box">
 <div class="faction"> {{ faction.FactionName }} </div>
 <div class="score"> Score: {{ faction.Score }} </div>
-<div class="time">Total Time (s): {{faction.TotalTime}}</div>
+<div class="time">Total Time (s): {{hrs}}:{{"%02d"|format(mins)}}:{{"%02d"|format(secs)}}</div>
 </div>
 <!--<span>{{ faction.FactionName }} - Score: {{ faction.Score }} - Total Time: {{faction.TotalTime}}</span><br>-->
 {% endfor %}

@@ -23,6 +23,7 @@
 		<!--
 		<div class="phaseID">{{ cPhase }} </div>
 		<div class="flavor">{{ flavor }}</div>
+		{{int(faction.TotalTime/3600)}}:{{int((faction.TotalTime%3600)/60)}}:{{((faction.TotalTime%3600)%60)}}
 		-->
 	</div>
 {% endif %}
@@ -45,7 +46,10 @@
 					<div class="speakerB"><button type="submit" name="{{faction.FactionName}}" value="speaker" class="speakerButton">Make Speaker</button></div>
 				{% endif %}
 				<div class="points">{{ faction.Score }}</div>
-				<div class="time">{{ faction.TotalTime }}</div>
+				{% set hrs=(faction.TotalTime/3600) | int%}
+				{% set mins=((faction.TotalTime%3600)/60) | int%}
+				{% set secs=((faction.TotalTime%3600)%60) | int%}
+				<div class="time">{{hrs}}:{{"%02d"|format(mins)}}:{{"%02d"|format(secs)}}</div>
 				<div class="title">{{ faction.FactionName }}</div>
 				<div class="button1"><button type="submit" name="{{faction.FactionName}}" value="score" class="bigButton">+1</button></div>
 				<div class="button2"><button type="submit" name="{{faction.FactionName}}" value="correct" class="bigButton">-1</button></div>

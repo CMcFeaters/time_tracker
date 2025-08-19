@@ -4,7 +4,10 @@
 <div class="end_game">
 <div class="bigBoldText">Faction</div><div class="center"><div class="bigBoldText">Score</div></div><div class="bigBoldText">Time</div>
 {% for faction in factions %}
-	<div > {{ faction.FactionName }}</div><div class="center">{{ faction.Score }}</div><div>{{faction.TotalTime}}</div>
+	{% set hrs=(faction.TotalTime/3600) | int%}
+	{% set mins=((faction.TotalTime%3600)/60) | int%}
+	{% set secs=((faction.TotalTime%3600)%60) | int%}
+	<div > {{ faction.FactionName }}</div><div class="center">{{ faction.Score }}</div><div>{{hrs}}:{{"%02d"|format(mins)}}:{{"%02d"|format(secs)}}</div>
 
 {% endfor %}
 </div>
