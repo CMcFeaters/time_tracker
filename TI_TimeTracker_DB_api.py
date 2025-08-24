@@ -28,6 +28,7 @@ class Games(Base):
 	GameEvents: Mapped[List["Events"]]=relationship(back_populates="Game")	
 	#you need to remove this backlink to finish removing combat
 	GameCombats: Mapped[List["Combats"]]=relationship(back_populates="Game")	#backlink to combats table
+	GameTurns: Mapped[List["Turns"]]=relationship(back_populates="Game")	#backlink to combats table
 
 	
 class Users(Base):
@@ -67,6 +68,7 @@ class Factions(Base):
 	GamePlayed: Mapped["Games"]=relationship(back_populates="GameFactions")
 	User: Mapped["Users"]=relationship(back_populates="FactionsPlayed")
 	FactionActions: Mapped[List["Events"]]=relationship(back_populates="Faction")#is this right?
+	FactionTurns: Mapped[List["Turns"]]=relationship(back_populates="Faction")#is this right?
 	#constraints
 	PrimaryKeyConstraint(FactionName,GameID,name="pk_factions")#the primary key is made up of Factinoname and GameID so a unique entry in the table is this combination
 	
@@ -80,10 +82,11 @@ class Events(Base):
 	#data
 	EventTime: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())
 	EventType: Mapped[str]=mapped_column(String(30))
-	MiscData: Mapped[Optional[int]] #1,2,3 primary/secondary/combat on end turn| initiative on start state
+	MiscData: Mapped[Optional[int]] #1,2,3,4 primary/secondary/combat/pass on end turn| initiative on start state
 	PhaseData: Mapped[Optional[str]]=mapped_column(String(30))
 	StateData: Mapped[Optional[str]]=mapped_column(String(30))
 	Round: Mapped[Optional[int]]	#the round the event occured in
+	EventLink: Mapped[Optional[int]]	#This is used ot link to start events for end events
 	#relationships
 	Game: Mapped["Games"]=relationship(back_populates="GameEvents")
 	Faction: Mapped["Factions"]=relationship(back_populates="FactionActions")
@@ -105,6 +108,23 @@ class Events(Base):
 		Initiative - FactionName - MiscData (init number)
 		End/StartState - ends/starts a state StateData(state "Active","Combat","Pause")
 	'''
+	
+class Turns(Base):
+	__tablename__="turns"
+	#keys
+	TurnID: Mapped[int] = mapped_column(primary_key=True)
+	GameID: Mapped[int] = mapped_column(ForeignKey("games.GameID"))
+	FactionName: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
+	#data
+	TurnTime: Mapped[Optional[int]]	#How long was the turn
+	TurnNumber: Mapped[Optional[int]]	#the total turn number
+	TurnNumberRound: Mapped[Optional[int]]	#how many turns for a given round
+	Round: Mapped[Optional[int]]	#the round the event occured in
+	TurnType: Mapped[Optional[str]]=mapped_column(String(30))	#log the turn type - Tactical,Primary,Secondary,Phase,Combat
+	#relationships
+	Game: Mapped["Games"]=relationship(back_populates="GameTurns")
+	Faction: Mapped["Factions"]=relationship(back_populates="FactionTurns")
+
 #you need to remove this table from the DB to finish removing combats
 class Combats(Base):
 	__tablename__="combats"

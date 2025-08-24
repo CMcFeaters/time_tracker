@@ -773,16 +773,7 @@ def restart():
 	createNew()
 
 '''
-def timeConvert():
-	baseT=dt.datetime(1970,1,1)
-	with Session() as session:
-		times=session.scalars(select(Factions)).all()
-		for t in times:
-			#tSec=(t.TotalTime-baseT).total_seconds()
-			tSec=t.TotalTime.total_seconds()
-			print(f'{t.GameID} - {t.FactionName} - {tSec} - {int(tSec/3600)}:{int((tSec%3600)/60):02}:{int((tSec%3600)%60):02} --- {t.TotalTime}')
-			t.tempTime=tSec
-		session.commit()
+
 '''
 
 if __name__=="__main__":
