@@ -1,0 +1,17 @@
+when we create an event:
+Turn Table
+	on "END Events" make entry in turn table
+	TurnType - Tactical,Primary,Secondary,Phase,Combat,Strategy, Round, Game
+	TurnInfo - (phase - status/strategy/tactic/agenda, strategic - pirmary/secondary, tactical - normal/combat/pass, status - active/stratgic/pause)
+	MiscData - (state - what strategy cards was it, strategy-primary/secondary)
+	EventID - the closing event ID
+	Faction - if applicable, who made the change
+	turnNumber - what  number turn is it for the faction?
+	turnNumberRound - what turn number is it in this round
+	GameID - what game
+	TurnTime - how long the turn took
+	round - what round it occured during
+
+Events
+	Strategy data - what strategy card # was it
+	EventLink - what closing or starting event is linked to this one

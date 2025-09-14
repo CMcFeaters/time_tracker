@@ -23,12 +23,13 @@ class Games(Base):
 	GameDate: Mapped[datetime.date]
 	GameWinner: Mapped[Optional[str]]=mapped_column(String(30))
 	Active: Mapped[bool] =mapped_column(default=0)	#if active game: 1
+	GameStrategy: Mapped[Optional[str]]=mapped_column(String(30))	#when a strategy phase is active, identifies the current strat card played
 	#relationship
-	GameFactions: Mapped[List["Factions"]]=relationship(back_populates="GamePlayed")
-	GameEvents: Mapped[List["Events"]]=relationship(back_populates="Game")	
+	GameFactions: Mapped[List["Factions"]]=relationship('Factions',back_populates="GamePlayed")
+	GameEvents: Mapped[List["Events"]]=relationship('Events',back_populates="Game")	
 	#you need to remove this backlink to finish removing combat
-	GameCombats: Mapped[List["Combats"]]=relationship(back_populates="Game")	#backlink to combats table
-	GameTurns: Mapped[List["Turns"]]=relationship(back_populates="Game")	#backlink to combats table
+	GameCombats: Mapped[List["Combats"]]=relationship('Combats',back_populates="Game")	#backlink to combats table
+	GameTurns: Mapped[List["Turns"]]=relationship('Turns',back_populates="Game")	#backlink to combats table
 
 	
 class Users(Base):
@@ -38,7 +39,7 @@ class Users(Base):
 	#data
 	UserName: Mapped[str]=mapped_column(String(30), unique=True)
 	#relationships
-	FactionsPlayed: Mapped[List["Factions"]]=relationship(back_populates="User")
+	FactionsPlayed: Mapped[List["Factions"]]=relationship('Factions',back_populates="User")
 	
 
 class Factions(Base):
@@ -60,15 +61,15 @@ class Factions(Base):
 	Strategy2: Mapped[Optional[int]]=mapped_column(default=0)	#the number of the second strategy card
 	StrategyStatus1: Mapped[Optional[int]]=mapped_column(default=0)	#the status of the first strategy card: 1: not used, 0:used
 	StrategyStatus2: Mapped[Optional[int]]=mapped_column(default=0) #the status of the first strategy card: 1: not used, 0:used, -1: N/A
-	StrategyName1: Mapped[str]=mapped_column(String(30))
-	StrategyName2: Mapped[str]=mapped_column(String(30))
+	StrategyName1: Mapped[Optional[str]]=mapped_column(String(30))
+	StrategyName2: Mapped[Optional[str]]=mapped_column(String(30))
 
 	
 	#relationships
-	GamePlayed: Mapped["Games"]=relationship(back_populates="GameFactions")
-	User: Mapped["Users"]=relationship(back_populates="FactionsPlayed")
-	FactionActions: Mapped[List["Events"]]=relationship(back_populates="Faction")#is this right?
-	FactionTurns: Mapped[List["Turns"]]=relationship(back_populates="Faction")#is this right?
+	GamePlayed: Mapped["Games"]=relationship('Games',back_populates="GameFactions")
+	User: Mapped["Users"]=relationship('Users',back_populates="FactionsPlayed")
+	FactionActions: Mapped[List["Events"]]=relationship('Events',back_populates="Faction")#is this right?
+	FactionTurns: Mapped["Turns"]=relationship('Turns',back_populates="Faction")#is this right?
 	#constraints
 	PrimaryKeyConstraint(FactionName,GameID,name="pk_factions")#the primary key is made up of Factinoname and GameID so a unique entry in the table is this combination
 	
@@ -86,10 +87,13 @@ class Events(Base):
 	PhaseData: Mapped[Optional[str]]=mapped_column(String(30))
 	StateData: Mapped[Optional[str]]=mapped_column(String(30))
 	Round: Mapped[Optional[int]]	#the round the event occured in
-	EventLink: Mapped[Optional[int]]	#This is used ot link to start events for end events
+	EventLink: Mapped[Optional[int]]	#This is used ot link to start events and end events
+	StrategyData: Mapped[Optional[str]]=mapped_column(String(30))	#captures the strategy card for strategic action related cards
 	#relationships
-	Game: Mapped["Games"]=relationship(back_populates="GameEvents")
-	Faction: Mapped["Factions"]=relationship(back_populates="FactionActions")
+	Game: Mapped["Games"]=relationship('Games',back_populates="GameEvents")
+	Faction: Mapped["Factions"]=relationship('Factions',back_populates="FactionActions")
+	EventTurns: Mapped["Turns"]=relationship('Turns',back_populates="Events")#is this right?
+	
 	
 	#constraints
 	#PrimaryKeyConstraint(EventID,GameID,name="pk_Events")
@@ -111,19 +115,40 @@ class Events(Base):
 	
 class Turns(Base):
 	__tablename__="turns"
+
 	#keys
 	TurnID: Mapped[int] = mapped_column(primary_key=True)
 	GameID: Mapped[int] = mapped_column(ForeignKey("games.GameID"))
-	FactionName: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
+	FactionName: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))	#the ID of the faction, if applicable
+	EventID: Mapped[Optional[str]]=mapped_column(ForeignKey("events.EventID"))	#the event ID of the closing event
 	#data
 	TurnTime: Mapped[Optional[int]]	#How long was the turn
-	TurnNumber: Mapped[Optional[int]]	#the total turn number
-	TurnNumberRound: Mapped[Optional[int]]	#how many turns for a given round
+	TurnNumber: Mapped[Optional[int]]	#the total turn number, i'm not sure if i want to collect this yet
+	TurnNumberRound: Mapped[Optional[int]]	#how many turns for a given round, i'm not sure if i want to collect this yet
 	Round: Mapped[Optional[int]]	#the round the event occured in
-	TurnType: Mapped[Optional[str]]=mapped_column(String(30))	#log the turn type - Tactical,Primary,Secondary,Phase,Combat
+	TurnType: Mapped[Optional[str]]=mapped_column(String(30))	#log the turn type - Tactical,Primary,Secondary,Phase,Combat,Strategy
+	TurnInfo: Mapped[Optional[str]]=mapped_column(String(30))	#additional turn info - (phase - status/strategy/tactic/agenda, strategic - pirmary/secondary, tactical - normal/combat/pass, status - active/stratgic/pause)
+	MiscData: Mapped[Optional[str]]=mapped_column(String(30))	#misc data - any other data we need (state - what strategy cards was it, strategy-primary/secondary)
+	
 	#relationships
-	Game: Mapped["Games"]=relationship(back_populates="GameTurns")
-	Faction: Mapped["Factions"]=relationship(back_populates="FactionTurns")
+	Game: Mapped["Games"]=relationship("Games",back_populates="GameTurns")
+	Faction: Mapped["Factions"]=relationship("Factions",back_populates="FactionTurns")
+	Events: Mapped["Factions"]=relationship("Events",back_populates="EventTurns",)
+
+	#turnid - primary key
+	#gameid - game indicator
+	#eventID - The id of the closing event
+	#facitoname - link to faction making the turn, if applicable
+	#turnNumber - what number was this
+	#turnNumberRound - what number was this
+	#turn time - how long (in seconds) did this turn take
+	#Round - what round did this occur during
+	#turntype - what kind of turn was it (phase, strategic, tactical, status)
+	#turninfo - what other info do we need to know?  (phase - status/strategy/tactic/agenda, strategic - what strategy card was it, tactical - normal or combat, status - active/stratgic/pause)
+	#misc data - any other data we need (strategy - primary/secondary,state - what strategy cards was it)
+	
+
+	
 
 #you need to remove this table from the DB to finish removing combats
 class Combats(Base):

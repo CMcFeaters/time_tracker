@@ -1,7 +1,7 @@
 from flask import Flask, render_template, redirect, url_for,request
 import server_api
 from sqlalchemy import select, and_
-from TI_TimeTracker_DB_api import Games, Users, Factions, Events, Combats
+from TI_TimeTracker_DB_api import Games, Users, Factions, Events, Combats, Turns
 import datetime
 
 #config=dotenv_values(".env")
@@ -218,14 +218,14 @@ def game_pause():
 	If we want to change this we'll have to also address the "time tracking" function
 	'''
 	if request.method=="POST":
-		server_api.boolEvent(GID,"Pause",0)	#create an event the phase ended
+		#server_api.boolEvent(GID,"Pause",0)	#create an event the phase ended
 		server_api.changeState(GID,"Active")		#change the state back to action phase
 		return phase_selector()
 	else:
 		#we can only enter the pause state from the action state
 		#otherwise go back to our current state
 		if state=="Active":  #first time we're here
-			server_api.boolEvent(GID,"Pause",1) 	#add the pause event
+			#server_api.boolEvent(GID,"Pause",1) 	#add the pause event
 			server_api.changeState(GID,"Pause")	#change the state
 		#remove option for combat state
 		#elif state=="Combat":	#we clicked puase while in combat, go to combat
@@ -234,71 +234,11 @@ def game_pause():
 			return redirect(url_for('strategic_action'))
 		return render_template("pause.html", cPhase="Paused", factions=factions, flavor="Game")	#if the state is pause or active, go to pause page
 
-# remove COMBAT PAGE
-'''
-@app.route('/combat', methods=['GET','POST'])
-def game_combat():
-	#pause page, underlying code creates a pause event
-	#page allows users to unpause or go through the end-game cycle
-	
-		#NOTE: may want to add a "combat" state somewhere in the db  rather than just having it as
-		#an event so that it has some resiliency 
-	#will have to initiate combat event (Default start/stop time will be "now")
-	#will have to stop combat event (need ot change devault stop time to "now")
-	
-	GID=get_active_game() #get teh active game ID or return to the welcome page
-	with server_api.Session() as session:	#get state and factions 
-		factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
-		state=session.scalars(select(Games.GameState).where(Games.GameID==GID)).first()
-	
-	
-	#if we are posting to this page, we are either aborting combat (draw/misclick) or completing combat
-	#this determines what type of event we create and if we make an entry
-	#in the combat table
-	
-	if request.method=="POST":
-		activeCombat=session.scalars(select(Combats).where(and_(Games.GameID==GID,Combats.Active==1))).first()
-		if (request.form.get('action')):	#check if one of our action buttons was pressed
-			
-			#the active combat is over, determine if we update participants or call it a draw
-			
-			
-			if(request.form['action']=="complete"):	#check if it was completed
-				print("combat completed")
-				#combat table entry
-				activeCombat.Aggressor=request.form['Aggressor']
-				activeCombat.Defender=request.form.get('Defender')
-				if request.form.get('winner')=="aggressor":
-					activeCombat.Winner=request.form.get('Aggressor')
-				elif request.form.get('winner')=="defender":
-					activeCombat.Winner=request.form.get('Aggressor')
-					
-			activeCombat.Active=0		#end the combat active status
-			activeCombat.StopTime=datetime.datetime.now()
-			session.commit()
-			server_api.boolEvent(GID,"Combat",0)	#combat endevent
-			server_api.changeState(GID,"Active")	#Update teh game state
-		return phase_selector()	#find our true page
-	else:
-		if state=="Active":	#combat can only be entered from active, otherwise we ignore
-			
-			#	create a new combat event, chagne stte to combat and create an entry in our
-			#	combat table
-			
-			server_api.boolEvent(GID,"Combat",1)	#update event
-			server_api.changeState(GID,"Combat")	#update state
-			server_api.Session.add(Combats(GameID=GID))	#create a new combat event
-			session.commit()
-		elif state=="Pause":	#we hit combat  while in pause
-			return redirect(url_for('game_pause'))	#return to pause page
-		return render_template("combat.html", cPhase="Glorious", factions=factions, flavor="Combat")	#go to the combat page (active/combat) state
-
-'''
-
 @app.route('/stop', methods=['GET'])
 def stop_game():
 	'''
 		This deactivates the current game and kicks you to the phase_select screen
+		
 	'''
 	GID=get_active_game()
 	with server_api.Session() as session:
@@ -515,11 +455,11 @@ def strategic_action():
 		if nextFaction==server_api.Session().scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first().FactionName:	#if the next faction is the currently active faction, we're done
 			'''
 				this current has 3 updates done at different phases.  all of these updates need to execute and should be atomic (they all work or they don't coccur)
-				to preserve the state of the system
+				to preserve the state of the system, but alas, i didn't do that
 			'''
 			server_api.closeStrat(GID)	#update the strat card status to 0 (done)
 			nextFaction=server_api.findNext(GID)	#find the next faction
-			server_api.startTurn(GID,nextFaction)	#set the next faction as active, and initiate a start turn event
+			server_api.startFactTurn(GID,nextFaction)	#set the next faction as active, and initiate a start turn event
 			server_api.changeState(GID,"Active")	#update the state, we're done with strategic
 			return(phase_selector())	#phase select next section
 		else:	#move on to the next faction
