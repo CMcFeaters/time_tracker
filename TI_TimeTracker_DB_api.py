@@ -120,15 +120,15 @@ class Turns(Base):
 	TurnID: Mapped[int] = mapped_column(primary_key=True)
 	GameID: Mapped[int] = mapped_column(ForeignKey("games.GameID"))
 	FactionName: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))	#the ID of the faction, if applicable
-	EventID: Mapped[Optional[str]]=mapped_column(ForeignKey("events.EventID"))	#the event ID of the closing event
+	EventID: Mapped[Optional[int]]=mapped_column(ForeignKey("events.EventID"))	#the event ID of the closing event
 	#data
 	TurnTime: Mapped[Optional[int]]	#How long was the turn
 	TurnNumber: Mapped[Optional[int]]	#the total turn number, i'm not sure if i want to collect this yet
 	TurnNumberRound: Mapped[Optional[int]]	#how many turns for a given round, i'm not sure if i want to collect this yet
 	Round: Mapped[Optional[int]]	#the round the event occured in
-	TurnType: Mapped[Optional[str]]=mapped_column(String(30))	#log the turn type - Tactical,Primary,Secondary,Phase,Combat,Strategy
-	TurnInfo: Mapped[Optional[str]]=mapped_column(String(30))	#additional turn info - (phase - status/strategy/tactic/agenda, strategic - pirmary/secondary, tactical - normal/combat/pass, status - active/stratgic/pause)
-	MiscData: Mapped[Optional[str]]=mapped_column(String(30))	#misc data - any other data we need (state - what strategy cards was it, strategy-primary/secondary)
+	TurnType: Mapped[Optional[str]]=mapped_column(String(30))	#log the turn type - Tactical,Strategic, round,phase,game,state
+	TurnInfo: Mapped[Optional[str]]=mapped_column(String(30))	#additional turn info - tactical-combat/pass/action, strategic-secondary/primary, phase -Status/Strategy/Tactical/agenda, state-pause/strategic/active`
+	MiscData: Mapped[Optional[str]]=mapped_column(String(30))	#misc data - stratigic - strategy card #, state-strategy card number
 	
 	#relationships
 	Game: Mapped["Games"]=relationship("Games",back_populates="GameTurns")

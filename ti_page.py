@@ -334,7 +334,7 @@ def action_phase():
 				if(request.form['action']=="end"):
 					if (request.form.get('combat')):
 						print(f"Combat: {request.form['combat']} detected")
-						server_api.endTurn(GID,activeFaction.FactionName,0,3)
+						server_api.endTurn(GID,activeFaction.FactionName,2)
 					else:
 						print(f"No combat detected {request.form.get('combat')}")
 						server_api.endTurn(GID,activeFaction.FactionName,0)
@@ -348,12 +348,12 @@ def action_phase():
 					#print(f'Complete')
 				elif(request.form['action']=="Strategy1"):
 					print("strategy 1 pressed")
-					server_api.changeStateStrat(GID,"Strategic",activeFaction.Strategy1)
+					server_api.changeStateStrat(GID,"Strategic",activeFaction.Strategy1,activeFaction.FactionName)
 					return(phase_selector())
 					#return redirect(url_for("strategic_action",strategy="1"))	#on everyone passing we will go to the next phase
 				elif(request.form['action']=="Strategy2"):
 					print("strategy 2 pressed")
-					server_api.changeStateStrat(GID,"Strategic",activeFaction.Strategy2)
+					server_api.changeStateStrat(GID,"Strategic",activeFaction.Strategy2,activeFaction.FactionName)
 					return(phase_selector())
 					#return redirect(url_for("strategic_action",strategy="2"))	#on everyone passing we will go to the next phase
 

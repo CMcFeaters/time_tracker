@@ -1,9 +1,23 @@
 when we create an event:
 Turn Table
 	on "END Events" make entry in turn table
-	TurnType - Tactical,Primary,Secondary,Phase,Combat,Strategy, Round, Game
-	TurnInfo - (phase - status/strategy/tactic/agenda, strategic - pirmary/secondary, tactical - normal/combat/pass, status - active/stratgic/pause)
-	MiscData - (state - what strategy cards was it, strategy-primary/secondary)
+	TurnType - 
+		Tactical, - a tactical action has ended
+		Primary, - a primary strategic action has ended
+		Secondary, - a secondary strategic action has ended
+		Phase, - a phase ended 
+		Strategic, a strategic action has ended (all primary and secondaries complete)
+		Round, - a round has ended
+		Game, -the game has ended
+		Pause- a pause has ended
+	TurnInfo - 
+		(phase - status/strategy/tactic/agenda, 
+		strategic - pirmary/secondary/total, 
+		tactical - action/combat/pass, 
+		status - active/stratgic/pause)\
+		
+	MiscData - 
+		(state - what strategy cards was it, strategy-primary/secondary)
 	EventID - the closing event ID
 	Faction - if applicable, who made the change
 	turnNumber - what  number turn is it for the faction?
