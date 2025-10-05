@@ -9,3 +9,5 @@ flask --app ti_page run
 
 to run in network mode:
 flask --app ti_page run --host=0.0.0.0
+
+test

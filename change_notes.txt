@@ -29,3 +29,15 @@ Turn Table
 Events
 	Strategy data - what strategy card # was it
 	EventLink - what closing or starting event is linked to this one
+
+Todo Items
+Undos
+-undoendstrat
+-underendturn
+ends
+endphase
+endturn
+endstrat
+gamestop
+changestrat
+getpauseturn
