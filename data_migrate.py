@@ -7,6 +7,21 @@ from time import sleep
 import sys
 
 Session=sessionmaker(engine)
+def addTurnTime():
+	#find all turns
+	#find eventIDS in turns (end event)
+	#find the start event (event link from end event)
+	#get the time delta between the two events
+	with Session() as session:
+		turns=session.scalars(select(Turns)).all()
+		for turn in turns:
+			endEvent=session.scalars(select(Events).where(Events.EventID==turn.EventID)).first()
+			startEvent=session.scalars(select(Events).where(Events.EventID==endEvent.EventLink)).first()
+			timeDelta=getTimeDelta(endEvent.EventTime,startEvent.EventTime)
+			#print(f'Turn {turn.TurnID} Game: {turn.GameID} time: {timeDelta} start: {startEvent.EventTime} end: {endEvent.EventTime}')
+			turn.TurnTime=timeDelta
+			#not committing?
+		session.commit()
 
 def timeConvert():
 	baseT=dt.datetime(1970,1,1)
@@ -158,9 +173,9 @@ def turnFill(GID=3):
 		session.commit()
 
 	
-def getTimeDelta(t1,t2):
+def getTimeDelta(endTime,startTime):
 	#given T1 and T2, returns the delta in seconds as an int
-	return (t1-t2).total_seconds()
+	return (endTime-startTime).total_seconds()
 
 def addStrategyData(GID=3):
 	#adds the informaitno to the strategy data column in events
@@ -182,6 +197,113 @@ def addStrategyData(GID=3):
 		session.commit()
 		#[print(f'{pair[0].EventID} - {pair[1].EventID}') for pair in pairs]
 		
+def convertStratergyData(GID=4):
+	#this function will migrate the stategy data value in events (strategy card number)
+	#and translate it to the strategycardnumber/name columns"
+	strategyNameDict={None:None,1:"Leadership",2:"Diplomacy",3:"Politics",4:"Construction",5:"Trade",6:"Warfare",7:"Technology",8:"Imperial"}
+	with Session() as session:
+		#find all the entries where strategydata is not null and modify the dict
+		x=session.scalars(select(Events).where(Events.GameID==GID, Events.StrategyData.isnot(None))).all()
+		for entry in x:
+			entry.StrategyCardNumber=int(entry.StrategyData)
+			entry.StrategyCardName=strategyNameDict[int(entry.StrategyData)]
+		#print(f'StragetyData: {x.StrategyData} is of type {type(x.StrategyData)}')
+		session.commit()
+	print(f'Done')
+
+def convertMisctoStrategic(GID=4):
+	#this function will migrate the MiscData from 1/2 when there is a strategic action into the StrategicActionData columndata value in events (strategy card number)
+	#and translate it to the strategycardnumber/name columns"
+	
+	with Session() as session:
+		#find all the entries where strategydata is not null and modify the dict
+		x=session.scalars(select(Events).where(Events.GameID==GID, Events.StateData=="Strategic",((Events.EventType=="EndTurn") | (Events.EventType=="StartTurn")))).all()
+		for entry in x:
+			print(f'EntryID: {entry.EventID} MiscData: {entry.MiscData} ')
+			entry.StrategicActionInfo=entry.MiscData
+		#print(f'StragetyData: {x.StrategyData} is of type {type(x.StrategyData)}')
+		session.commit()
+	print(f'Done transferring miscdata to strategicactioninfo')
+
+def endStateStrategic(GID=4):
+	#finds all the strategic end states, adds the faction name, stratcard name and number
+	with Session() as session:
+		x=session.scalars(select(Events).where(
+			Events.GameID==GID,
+			((Events.EventType=="StartTurn") | (Events.EventType=="EndState")),
+			Events.StateData=="Strategic")).all()
+		sources={event.EventLink:session.scalars(select(Events).where(Events.GameID==GID,Events.EventID==event.EventLink)).first() for event in x}
+		for event in x:
+			if sources[event.EventLink]:
+				event.StrategyCardNumber=sources[event.EventLink].StrategyCardNumber
+				event.StrategyCardName=sources[event.EventLink].StrategyCardName
+		session.commit()
+	print('done')
+
+def scoreFix(GID=4):
+	#updates score from miscdata containing the score, to scoretotla holding the score and the score column indicating+/-1
+	with Session() as session:
+		#eventDict={event.FactionName:None for event in 
+		#[eventDict[event.FactionName]scalars(select(Events).where(Events.GameID==GID,Events.EventType=="Score")).all()
+		#factionEvents=session.scalars(select(Events).where(Events.GameID==GID,Events.FactionName.isnot(None))).all()
+		pass
+
+def convertMisctoTactic(GID=4):
+	#updates the miscdata for endturns in the active state to tactic data.  should change to 0(nromal),1(pass),2(Combat)
+	with Session() as session:
+		x=session.scalars(select(Events).where(
+			Events.GameID==GID,
+			((Events.EventType=="EndTurn") | (Events.EventType=="PassTurn")),
+			Events.StateData=="Active")).all()
+		for event in x:
+			event.TacticalActionInfo=event.MiscData
+			event.EventType="EndTurn"
+		session.commit()
+	print("done")
+
+def turnConvert():
+	#converst all miscdata from turns to various other formats
+	with Session() as session:
+		#get strats
+		ps={"Primary":1,"Secondary":2}
+		tacticDict={"Tactical":0,"Action":0,"Pass":1,"Combat":2}
+		strategyNameDict={None:None,"Leadership":1,"Diplomacy":2,"Politics":3,"Construction":4,"Trade":5,"Warfare":6,"Technology":7,"Imperial":8}
+		strats=session.scalars(select(Turns).where(Turns.TurnType=="Strategic",((Turns.TurnInfo=="Primary") | (Turns.TurnInfo=="Secondary")))).all()
+		stratTotal=session.scalars(select(Turns).where(Turns.TurnType=="Strategic",Turns.TurnInfo!="Primary", Turns.TurnInfo!="Secondary")).all()
+		tactics=session.scalars(select(Turns).where(Turns.TurnType=="Tactical")).all()
+		phases=session.scalars(select(Turns).where(Turns.TurnType=="Phase")).all()
+		#combats=session.scalars(select(Turns).where(Turns.TurnType=="Combat")).all()
+		actives=session.scalars(select(Turns).where(Turns.TurnType=="Active")).all()
+		for strat in strats:
+			strat.StrategicActionInfo=ps[strat.TurnInfo]
+			strat.StrategyCardName=strat.MiscData
+			strat.StrategyCardNumber=strategyNameDict[strat.MiscData]
+		for strat in stratTotal:
+			strat.StrategicActionInfo=0	#0 is when the strategy card ends
+			strat.StrategyCardName=strat.MiscData
+			strat.StrategyCardNumber=strategyNameDict[strat.MiscData]
+		for tactic in tactics:
+			tactic.TacticalInfo=tacticDict[tactic.TurnInfo]
+		for phase in phases:
+			phase.PhaseInfo=phase.MiscData
+		session.commit()
+
+def tacticalConvert():
+	#convverst string tacticalinfo to integer tacticalactioninfo
+	with Session() as session:
+		tactics=session.scalars(select(Turns).where(Turns.TacticalInfo.isnot(None))).all()
+		for tactic in tactics:
+			tactic.TacticalActionInfo=int(tactic.TacticalInfo)
+		session.commit()
+
+def removePassTurn():
+	#converts all passturns to "EndTurn" and "1" tacticalactioninfo
+	with Session() as session:
+		passes=session.scalars(select(Events).where(Events.EventType=="PassTurn")).all()
+		for turn in passes:
+			turn.EventType="EndTurn"
+			turn.TacticalActionInfo=1
+		session.commit()
 
 if __name__=="__main__":
 	if len(sys.argv)>1:
@@ -190,9 +312,7 @@ if __name__=="__main__":
 		safemode="fuck you"
 	#just a little helper function
 	if safemode=="1":
-		pass
-		
-		
+		removePassTurn()
 	else:
 		#roundMaker(1)
 		print("safe mode enabled")

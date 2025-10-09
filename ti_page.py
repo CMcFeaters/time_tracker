@@ -218,14 +218,12 @@ def game_pause():
 	If we want to change this we'll have to also address the "time tracking" function
 	'''
 	if request.method=="POST":
-		#server_api.boolEvent(GID,"Pause",0)	#create an event the phase ended
 		server_api.changeState(GID,"Active")		#change the state back to action phase
 		return phase_selector()
 	else:
 		#we can only enter the pause state from the action state
 		#otherwise go back to our current state
 		if state=="Active":  #first time we're here
-			#server_api.boolEvent(GID,"Pause",1) 	#add the pause event
 			server_api.changeState(GID,"Pause")	#change the state
 		#remove option for combat state
 		#elif state=="Combat":	#we clicked puase while in combat, go to combat
@@ -326,7 +324,7 @@ def action_phase():
 
 		with server_api.Session() as session:
 			'''
-			end/pass active factions turn
+			end/pass/strat active factions turn
 			'''
 			activeFaction=session.scalars(select(Factions).where(Factions.GameID==GID, Factions.Active==1)).first()
 			#figure out what we're doing and execute that
@@ -346,11 +344,12 @@ def action_phase():
 					server_api.undoEndTurn(GID,activeFaction.FactionName)
 					return(phase_selector())
 					#print(f'Complete')
+				#did we press the first strategic action
 				elif(request.form['action']=="Strategy1"):
 					print("strategy 1 pressed")
 					server_api.changeStateStrat(GID,"Strategic",activeFaction.Strategy1,activeFaction.FactionName)
 					return(phase_selector())
-					#return redirect(url_for("strategic_action",strategy="1"))	#on everyone passing we will go to the next phase
+				#did we press a second strategic action?
 				elif(request.form['action']=="Strategy2"):
 					print("strategy 2 pressed")
 					server_api.changeStateStrat(GID,"Strategic",activeFaction.Strategy2,activeFaction.FactionName)
@@ -425,14 +424,15 @@ def status_phase():
 @app.route("/strategicAction", methods=['GET','POST'])
 def strategic_action():
 	'''
-		this page allows the user to select initiatives
-		must select different initiatives for each faction
-		need something to bounce you out of here if you're in the wrong state
+		this page is the main page for performing strategic actions
 	'''
 	GID=get_active_game() #get teh active game ID or return to the welcome page
+	#if it's a post, someone has hit the "done" button
 	if request.method=="POST":
+		#did they hit undo?
 		if request.form['action']=='undo':
 			print(f'Undo Pressed: STRAT')
+			#do the undo magic
 			server_api.undoEndStrat(GID)
 			return redirect(url_for('phase_selector'))
 		#identify who just finished:
@@ -448,10 +448,14 @@ def strategic_action():
 			#start turn next faction
 			#update Strat Status
 			#return to phase selector
-		currentFactionName=server_api.findActiveStrat(GID)	#identify whos next, should give us the end-find next sequence
-		server_api.endStrat(GID,currentFactionName)	#create end event
-		nextFaction=server_api.findActiveStrat(GID)	#identify whos next, should give us the end-find next sequence
+		#identify whoscurrently active
+		currentFactionName=server_api.findActiveStrat(GID) #this will be either the start turn or the startstate
+		#create end event and end that strategic action
+		server_api.endStrat(GID,currentFactionName)	
+		#setup the next faction
+		nextFaction=server_api.findActiveStrat(GID)	#identify whos next, this will be the endturn action
 		
+		#is this the last faction to post, if so we close out
 		if nextFaction==server_api.Session().scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first().FactionName:	#if the next faction is the currently active faction, we're done
 			'''
 				this current has 3 updates done at different phases.  all of these updates need to execute and should be atomic (they all work or they don't coccur)
@@ -459,8 +463,9 @@ def strategic_action():
 			'''
 			server_api.closeStrat(GID)	#update the strat card status to 0 (done)
 			nextFaction=server_api.findNext(GID)	#find the next faction
-			server_api.startFactTurn(GID,nextFaction)	#set the next faction as active, and initiate a start turn event
 			server_api.changeState(GID,"Active")	#update the state, we're done with strategic
+			server_api.startFactTurn(GID,nextFaction)	#set the next faction as active, and initiate a start turn event
+			
 			return(phase_selector())	#phase select next section
 		else:	#move on to the next faction
 			server_api.startStrat(GID,nextFaction)
@@ -469,11 +474,13 @@ def strategic_action():
 	#strategic action.
 	#here we find teh active player, load up the screen with stratFaction as activeFaction
 	with server_api.Session() as session:
-		#get the old faction
+		#get the factions
 		factions=server_api.getFactions(GID)
-		strategy=server_api.findStrat(GID)[1]	#identify the strategy we're using
-
+		#get the strategy that was selected
+		strategy=session.scalars(select(Games).where(Games.GameID==GID)).first().GameStrategyName
+		#get teh speakerorder of factions
 		sFactions=server_api.getSpeakerOrder(GID,True)	#line up the factions in the correct order
+		#determine who was active
 		activeFaction=server_api.findActiveStrat(GID)	#find out who's up
 		#print(f'Active Faction: {activeFaction} for game {GID}')
 		return render_template("strategic_action.html", factions=factions,sFactions=sFactions, stratFaction=activeFaction,cPhase=strategy)

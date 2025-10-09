@@ -17,13 +17,15 @@ class Games(Base):
 	#keys
 	GameID: Mapped[int]=mapped_column(primary_key=True)
 	#data
-	GamePhase: Mapped[str]=mapped_column(String(30), default="Setup")
-	GameState: Mapped[str]=mapped_column(String(30), default="Active")
-	GameRound: Mapped[int]=mapped_column(default=0)
-	GameDate: Mapped[datetime.date]
-	GameWinner: Mapped[Optional[str]]=mapped_column(String(30))
+	GamePhase: Mapped[str]=mapped_column(String(30), default="Setup") #track teh current phase of the game
+	GameState: Mapped[str]=mapped_column(String(30), default="Active")	#tracks teh current state (Pause, Active, Strategic)
+	GameRound: Mapped[int]=mapped_column(default=0)	#tracks the game round
+	GameDate: Mapped[datetime.date]	#date the game was setup
+	GameWinner: Mapped[Optional[str]]=mapped_column(String(30))	#tracks winner of the game
 	Active: Mapped[bool] =mapped_column(default=0)	#if active game: 1
 	GameStrategy: Mapped[Optional[str]]=mapped_column(String(30))	#when a strategy phase is active, identifies the current strat card played
+	GameStrategyName: Mapped[Optional[str]]=mapped_column(String(30))	#when a strategy phase is active, identifies the current strat card name played
+	GameStrategyNumber: Mapped[Optional[str]]=mapped_column(String(30))	#when a strategy phase is active, identifies the current strat card number played
 	#relationship
 	GameFactions: Mapped[List["Factions"]]=relationship('Factions',back_populates="GamePlayed")
 	GameEvents: Mapped[List["Events"]]=relationship('Events',back_populates="Game")	
@@ -83,12 +85,16 @@ class Events(Base):
 	#data
 	EventTime: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())
 	EventType: Mapped[str]=mapped_column(String(30))
-	MiscData: Mapped[Optional[int]] #1,2,3,4 primary/secondary/combat/pass on end turn| initiative on start state
 	PhaseData: Mapped[Optional[str]]=mapped_column(String(30))
 	StateData: Mapped[Optional[str]]=mapped_column(String(30))
 	Round: Mapped[Optional[int]]	#the round the event occured in
 	EventLink: Mapped[Optional[int]]	#This is used ot link to start events and end events
-	StrategyData: Mapped[Optional[str]]=mapped_column(String(30))	#captures the strategy card for strategic action related cards
+	StrategyCardNumber: Mapped[Optional[str]]=mapped_column(String(30))	#captures the strategy card number for strategic action related cards
+	StrategyCardName: Mapped[Optional[str]]=mapped_column(String(30))	#captures the strategy card name for strategic actions
+	TacticalActionInfo: Mapped[Optional[int]]	#captures the strategic action type: normal (0), combat(1), pass(2)
+	StrategicActionInfo: Mapped[Optional[int]]	#captures teh primary/secondary of a strategic action
+	ScoreTotal: Mapped[Optional[int]]	#when a score event occurs, the total score
+	Score: Mapped[Optional[int]]	#when a score occurs, the direction (+/-1)
 	#relationships
 	Game: Mapped["Games"]=relationship('Games',back_populates="GameEvents")
 	Faction: Mapped["Factions"]=relationship('Factions',back_populates="FactionActions")
@@ -127,9 +133,13 @@ class Turns(Base):
 	TurnNumberRound: Mapped[Optional[int]]	#how many turns for a given round, i'm not sure if i want to collect this yet
 	Round: Mapped[Optional[int]]	#the round the event occured in
 	TurnType: Mapped[Optional[str]]=mapped_column(String(30))	#log the turn type - Tactical,Strategic, round,phase,game,state
-	TurnInfo: Mapped[Optional[str]]=mapped_column(String(30))	#additional turn info - tactical-combat/pass/action, strategic-secondary/primary, phase -Status/Strategy/Tactical/agenda, state-pause/strategic/active`
-	MiscData: Mapped[Optional[str]]=mapped_column(String(30))	#misc data - stratigic - strategy card #, state-strategy card number
-	
+	StrategyCardName: Mapped[Optional[str]]=mapped_column(String(30))	#if it's a strategic turn type, cpatures the strategic card name
+	StrategyCardNumber: Mapped[Optional[int]]	#if it's a strategic turn type, captures the stategic card number
+	TacticalInfo: Mapped[Optional[str]]=mapped_column(String(30))	#if it's a tactical action turn, captures if it's normal (0), combat(1), or a pass(2)
+	TacticalActionInfo: Mapped[Optional[int]]	#if it's a tactical action turn, captures if it's normal (0), combat(1), or a pass(2)
+	PhaseInfo: Mapped[Optional[str]]=mapped_column(String(30))	#if it's a phase turn, captures the phase name
+	StrategicActionInfo: Mapped[Optional[int]] #if a strategic Action, captures if its a primary (1) or secndary (2)
+
 	#relationships
 	Game: Mapped["Games"]=relationship("Games",back_populates="GameTurns")
 	Faction: Mapped["Factions"]=relationship("Factions",back_populates="FactionTurns")
