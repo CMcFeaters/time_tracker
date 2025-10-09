@@ -23,7 +23,6 @@ class Games(Base):
 	GameDate: Mapped[datetime.date]	#date the game was setup
 	GameWinner: Mapped[Optional[str]]=mapped_column(String(30))	#tracks winner of the game
 	Active: Mapped[bool] =mapped_column(default=0)	#if active game: 1
-	GameStrategy: Mapped[Optional[str]]=mapped_column(String(30))	#when a strategy phase is active, identifies the current strat card played
 	GameStrategyName: Mapped[Optional[str]]=mapped_column(String(30))	#when a strategy phase is active, identifies the current strat card name played
 	GameStrategyNumber: Mapped[Optional[str]]=mapped_column(String(30))	#when a strategy phase is active, identifies the current strat card number played
 	#relationship
@@ -135,7 +134,6 @@ class Turns(Base):
 	TurnType: Mapped[Optional[str]]=mapped_column(String(30))	#log the turn type - Tactical,Strategic, round,phase,game,state
 	StrategyCardName: Mapped[Optional[str]]=mapped_column(String(30))	#if it's a strategic turn type, cpatures the strategic card name
 	StrategyCardNumber: Mapped[Optional[int]]	#if it's a strategic turn type, captures the stategic card number
-	TacticalInfo: Mapped[Optional[str]]=mapped_column(String(30))	#if it's a tactical action turn, captures if it's normal (0), combat(1), or a pass(2)
 	TacticalActionInfo: Mapped[Optional[int]]	#if it's a tactical action turn, captures if it's normal (0), combat(1), or a pass(2)
 	PhaseInfo: Mapped[Optional[str]]=mapped_column(String(30))	#if it's a phase turn, captures the phase name
 	StrategicActionInfo: Mapped[Optional[int]] #if a strategic Action, captures if its a primary (1) or secndary (2)
