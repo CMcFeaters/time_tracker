@@ -9,7 +9,7 @@ from dotenv import dotenv_values
 #define the MARIADB engine
 
 config=dotenv_values(".env")	#laod the envinronment variabls
-engine=create_engine("mariadb+mariadbconnector://%s:%s@127.0.0.1:%s/%s"%(config['uname'],config['pw'],config['port'],config['db']))	#create the engine for connection
+engine=create_engine("mariadb+mariadbconnector://%s:%s@127.0.0.1:%s/%s"%(config['uname'],config['pw'],config['port'],config['db']),pool_size=20,max_overflow=15)	#create the engine for connection
 Base=declarative_base()
 
 class Games(Base):
@@ -50,7 +50,8 @@ class Factions(Base):
 	GameID: Mapped[int] = mapped_column(ForeignKey("games.GameID"))
 	UserID: Mapped[int] = mapped_column(ForeignKey("users.UserID"))
 	#data
-	Active: Mapped[bool] =mapped_column(default=0)
+	Active: Mapped[bool] =mapped_column(default=0)	#1 if currently active faction in active/tactic state, 0 if not
+	ActiveStrategy: Mapped[bool] =mapped_column(default=0)	#1 if currently acting in strategy state, 0 if not
 	TableOrder: Mapped[int] =mapped_column(default=0)
 	Speaker: Mapped[bool] =mapped_column(default=0)
 	Initiative: Mapped[int] =mapped_column(default=0)

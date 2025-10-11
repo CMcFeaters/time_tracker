@@ -184,7 +184,7 @@ def setup_phase():
 	with server_api.Session() as session:
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()	#get all teh factions for the bottom element
 		if request.method=="POST":	#if they hit the "Start button"
-			
+			server_api.createSetup(GID)
 			server_api.endPhase(GID,0) #end the setup phase
 			return phase_selector()
 		return render_template("setup_phase.html",factions=factions,cPhase="Setup", flavor="Phase")
@@ -328,50 +328,51 @@ def action_phase():
 			'''
 			activeFaction=session.scalars(select(Factions).where(Factions.GameID==GID, Factions.Active==1)).first()
 			#figure out what we're doing and execute that
-			if(request.form.get('action')):
-				if(request.form['action']=="end"):
-					if (request.form.get('combat')):
-						print(f"Combat: {request.form['combat']} detected")
-						server_api.endTurn(GID,activeFaction.FactionName,2)
-					else:
-						print(f"No combat detected {request.form.get('combat')}")
-						server_api.endTurn(GID,activeFaction.FactionName,0)
-				elif(request.form['action']=="pass"):
-					server_api.endTurn(GID,activeFaction.FactionName,1)
-					return(phase_selector())	#on everyone passing we will go to the next phase
-				elif(request.form['action']=="undo"):
-					print(f'*******************Undoing turn for {activeFaction.FactionName}')
-					server_api.undoEndTurn(GID,activeFaction.FactionName)
-					return(phase_selector())
-					#print(f'Complete')
-				#did we press the first strategic action
-				elif(request.form['action']=="Strategy1"):
-					print("strategy 1 pressed")
-					server_api.changeStateStrat(GID,"Strategic",activeFaction.Strategy1,activeFaction.FactionName)
-					return(phase_selector())
-				#did we press a second strategic action?
-				elif(request.form['action']=="Strategy2"):
-					print("strategy 2 pressed")
-					server_api.changeStateStrat(GID,"Strategic",activeFaction.Strategy2,activeFaction.FactionName)
-					return(phase_selector())
-					#return redirect(url_for("strategic_action",strategy="2"))	#on everyone passing we will go to the next phase
+			session.close()
+		if(request.form.get('action')):
+			if(request.form['action']=="end"):
+				if (request.form.get('combat')):
+					print(f"Combat: {request.form['combat']} detected")
+					server_api.endTurn(GID,activeFaction.FactionName,2)
+				else:
+					print(f"No combat detected {request.form.get('combat')}")
+					server_api.endTurn(GID,activeFaction.FactionName,0)
+			elif(request.form['action']=="pass"):
+				server_api.endTurn(GID,activeFaction.FactionName,1)
+				return(phase_selector())	#on everyone passing we will go to the next phase
+			elif(request.form['action']=="undo"):
+				print(f'*******************Undoing turn for {activeFaction.FactionName}')
+				server_api.undoEndTurn(GID,activeFaction.FactionName)
+				return(phase_selector())
+				#print(f'Complete')
+			#did we press the first strategic action
+			elif(request.form['action']=="Strategy1"):
+				print("strategy 1 pressed")
+				server_api.changeStateStrat(GID,"Strategic",activeFaction.Strategy1,activeFaction.FactionName)
+				return(phase_selector())
+			#did we press a second strategic action?
+			elif(request.form['action']=="Strategy2"):
+				print("strategy 2 pressed")
+				server_api.changeStateStrat(GID,"Strategic",activeFaction.Strategy2,activeFaction.FactionName)
+				return(phase_selector())
+				#return redirect(url_for("strategic_action",strategy="2"))	#on everyone passing we will go to the next phase
 
 	with server_api.Session() as session:
 		'''find the next faction or list none if there is no next'''
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).all()
 		activeFaction=session.scalars(select(Factions).where(Factions.GameID==GID, Factions.Active==1)).first()
 		activeUser=session.scalars(select(Users).where(Users.UserID==activeFaction.UserID)).first().UserName
-		nextFaction=""
-		i=1
-		while nextFaction=="":	
-			tNext=factions[(factions.index(activeFaction)+i)%len(factions)]
-			if tNext.Pass==False:
-				#print("Status of %s: %s"%(tNext.FactionName,tNext.Pass))
-				nextFaction=tNext
-			else:
-				i+=1
-			if i>len(factions):
-				nextFaction="None"
+	nextFaction=""
+	i=1
+	while nextFaction=="":	
+		tNext=factions[(factions.index(activeFaction)+i)%len(factions)]
+		if tNext.Pass==False:
+			#print("Status of %s: %s"%(tNext.FactionName,tNext.Pass))
+			nextFaction=tNext
+		else:
+			i+=1
+		if i>len(factions):
+			nextFaction="None"
 		#for faction in factions:
 			#print(f'{faction.FactionName} total time: {faction.TotalTime}')
 			
@@ -449,41 +450,46 @@ def strategic_action():
 			#update Strat Status
 			#return to phase selector
 		#identify whoscurrently active
-		currentFactionName=server_api.findActiveStrat(GID) #this will be either the start turn or the startstate
-		#create end event and end that strategic action
+		currentFactionName=server_api.getFactionAndStrat(GID)[0].FactionName #this will be either the start turn or the startstate
+		nextFaction=server_api.findNextSpeakerOrderByName(GID,currentFactionName)
+		#create end event and end that strategic action and update that activestrategy faction status to 0
 		server_api.endStrat(GID,currentFactionName)	
 		#setup the next faction
-		nextFaction=server_api.findActiveStrat(GID)	#identify whos next, this will be the endturn action
+		#nextFaction=server_api.findActiveStrat(GID)	#identify whos next, this will be the endturn action
 		
-		#is this the last faction to post, if so we close out
+		#check to see fi we have looped back to the active(first) faction and completed all our strategic actions
 		if nextFaction==server_api.Session().scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first().FactionName:	#if the next faction is the currently active faction, we're done
 			'''
 				this current has 3 updates done at different phases.  all of these updates need to execute and should be atomic (they all work or they don't coccur)
 				to preserve the state of the system, but alas, i didn't do that
 			'''
+			#close the strat card in factions
 			server_api.closeStrat(GID)	#update the strat card status to 0 (done)
-			nextFaction=server_api.findNext(GID)	#find the next faction
+			#find teh faction that is supposed to be next in initiative order for the active state
+			nextFaction=server_api.findAndSetNext(GID)	#find the next faction
+			#change the state back to active
 			server_api.changeState(GID,"Active")	#update the state, we're done with strategic
+			#start teh next factions turn
 			server_api.startFactTurn(GID,nextFaction)	#set the next faction as active, and initiate a start turn event
 			
 			return(phase_selector())	#phase select next section
 		else:	#move on to the next faction
+			#create a start event and update the active strategy status to 1 for the next faction
 			server_api.startStrat(GID,nextFaction)
 	
 	#if we are "get" it's the first time we're in the session, the action is to the active player to complete their s
 	#strategic action.
 	#here we find teh active player, load up the screen with stratFaction as activeFaction
-	with server_api.Session() as session:
-		#get the factions
-		factions=server_api.getFactions(GID)
-		#get the strategy that was selected
-		strategy=session.scalars(select(Games).where(Games.GameID==GID)).first().GameStrategyName
-		#get teh speakerorder of factions
-		sFactions=server_api.getSpeakerOrder(GID,True)	#line up the factions in the correct order
-		#determine who was active
-		activeFaction=server_api.findActiveStrat(GID)	#find out who's up
-		#print(f'Active Faction: {activeFaction} for game {GID}')
-		return render_template("strategic_action.html", factions=factions,sFactions=sFactions, stratFaction=activeFaction,cPhase=strategy)
+
+	#get the factions
+	factions=server_api.getFactions(GID)
+	#get thefaction and strategy that was selected
+	factstrat=server_api.getFactionAndStrat(GID)
+	print(f'Debug: Faction: {factstrat[0].FactionName} Strategy: {factstrat[1]}|{factstrat[2]}')
+	#get teh speakerorder of factions
+	sFactions=server_api.getSpeakerOrder(GID,True)	#line up the factions in the correct order
+
+	return render_template("strategic_action.html", factions=factions,sFactions=sFactions, stratFaction=factstrat[0],cPhase=factstrat[2])
 
 @app.route("/strategy", methods=['GET','POST'])
 def strategy_phase():
