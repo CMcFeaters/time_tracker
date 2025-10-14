@@ -348,12 +348,12 @@ def action_phase():
 			#did we press the first strategic action
 			elif(request.form['action']=="Strategy1"):
 				print("strategy 1 pressed")
-				server_api.changeStateStrat(GID,"Strategic",activeFaction.Strategy1,activeFaction.FactionName)
+				server_api.changeStateToStrat(GID,"Strategic",activeFaction.Strategy1,activeFaction.FactionName)
 				return(phase_selector())
 			#did we press a second strategic action?
 			elif(request.form['action']=="Strategy2"):
 				print("strategy 2 pressed")
-				server_api.changeStateStrat(GID,"Strategic",activeFaction.Strategy2,activeFaction.FactionName)
+				server_api.changeStateToStrat(GID,"Strategic",activeFaction.Strategy2,activeFaction.FactionName)
 				return(phase_selector())
 				#return redirect(url_for("strategic_action",strategy="2"))	#on everyone passing we will go to the next phase
 
@@ -452,11 +452,6 @@ def strategic_action():
 		#identify whoscurrently active
 		currentFactionName=server_api.getFactionAndStrat(GID)[0].FactionName #this will be either the start turn or the startstate
 		nextFaction=server_api.findNextSpeakerOrderByName(GID,currentFactionName)
-		#create end event and end that strategic action and update that activestrategy faction status to 0
-		server_api.endStrat(GID,currentFactionName)	
-		#setup the next faction
-		#nextFaction=server_api.findActiveStrat(GID)	#identify whos next, this will be the endturn action
-		
 		#check to see fi we have looped back to the active(first) faction and completed all our strategic actions
 		if nextFaction==server_api.Session().scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first().FactionName:	#if the next faction is the currently active faction, we're done
 			'''
@@ -464,16 +459,28 @@ def strategic_action():
 				to preserve the state of the system, but alas, i didn't do that
 			'''
 			#close the strat card in factions
+			#create end event and end that strategic action and update that activestrategy faction status to 0
+			#server_api.endStrat(GID,currentFactionName)	
+			#change closestrat to retun the strat and faction to close
+			#call closestrat function to: 
+			# close teh strat state, update the game strat info, update the faction strat card data, start the next factions turn
 			server_api.closeStrat(GID)	#update the strat card status to 0 (done)
+
 			#find teh faction that is supposed to be next in initiative order for the active state
-			nextFaction=server_api.findAndSetNext(GID)	#find the next faction
+			#just return th enerxt strat (already done)
+			#nextFaction=server_api.findAndSetNext(GID)	#find the next faction
 			#change the state back to active
-			server_api.changeState(GID,"Active")	#update the state, we're done with strategic
+			#in the larger function change this to a 
+			#server_api.changeState(GID,"Active")	#update the state, we're done with strategic
 			#start teh next factions turn
-			server_api.startFactTurn(GID,nextFaction)	#set the next faction as active, and initiate a start turn event
+			#server_api.startFactTurn(GID,nextFaction)	#set the next faction as active, and initiate a start turn event
 			
+			#return to the phase selector to continue forward
 			return(phase_selector())	#phase select next section
 		else:	#move on to the next faction
+			#create end event and end that strategic action and update that activestrategy faction status to 0
+			#end strat/start strat should be an atomic action.
+			server_api.endStrat(GID,currentFactionName)	
 			#create a start event and update the active strategy status to 1 for the next faction
 			server_api.startStrat(GID,nextFaction)
 	

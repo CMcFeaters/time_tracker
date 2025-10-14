@@ -523,6 +523,9 @@ def endTurn(GID,faction,tacticalActionInfo=0):
 	print(f'Engine Stop: checked out: {engine.pool.checkedout()} checkedin {engine.pool.checkedin()}')
 
 def startFactTurn(GID,faction):
+	# strats the turn for the designated "faction
+	# sets teh Faction to active, and creates a start event
+	#
 	'''
 	starts a faction's turn
 	create an event for turn start
@@ -541,88 +544,180 @@ def startFactTurn(GID,faction):
 			StateData=gameBase.GameState)
 		session.add(newEvent)
 		session.commit()
-	
-def startStrat(GID,faction):
-	'''
-		creates a start stratevent for the given faction and sets the active strategy status to 1 for that faction
-	'''
-	with Session() as session:
-		gameBase=session.scalars(select(Games).where(Games.GameID==GID)).first()
-		#note strategicactioninfo is always 2, since this is always a secondary action.  THe start of the strategy turn is captured as a generic start turn and is indicated 
-		newEvent=Events(
-			GameID=GID,
-			EventType="StartTurn",
-			FactionName=faction,
-			StrategicActionInfo=2,
-			Round=gameBase.GameRound,
-			PhaseData=gameBase.GamePhase,
-			StateData=gameBase.GameState,
-			StrategyCardNumber=int(gameBase.GameStrategyNumber),
-			StrategyCardName=strategyNameDict[int(gameBase.GameStrategyNumber)]
-			)
-		session.add(newEvent)
-		#set the active strategy status to 1
-		session.scalars(select(Factions).where(Factions.GameID==GID,Factions.FactionName==faction)).first().ActiveStrategy=1
-		session.commit()
 
 def closeStrat(GID):
-	'''
-		closes teh current strat in GID
-	'''
+	#this function will end the active strategy turn, 
+	# set the strategystatusX value to 0 from teh calling faction,
+	# set the gamestate to active, start the next factions turn
+	# this function is called from the strategic action page when the last faction to act closes their turn
+	#
 	
 	with Session() as session:
+		#find the base game
 		gameBase=session.scalars(select(Games).where(Games.GameID==GID)).first()
-		
+		#find the current strat
 		strat=(gameBase.GameStrategyNumber,gameBase.GameStrategyName)
-		sFaction=session.scalars(select(Factions).where(Factions.GameID==GID,or_(Factions.Strategy1==strat[0],Factions.Strategy2==strat[0]))).first()	#find the faction related to this strat
+		#find the faction that called the strat (they called the strat)
+		actFaction=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first()
+		#find the faction that is currently closing their secondary strategic action
+		stratFaction=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.ActiveStrategy==1))
 		#this is missing a stratstart event, why are we doing a "stratEND"?instead just a turn and a normal stateEnd?
 		#create the overall strategy turn
 		print(f'Debug: GameBase Strategy - {gameBase.GameStrategyNumber} | {gameBase.GameStrategyName}')
 		print(f'Debug: STRAT Strategy - {strat[0]} | {strat[1]}')
-		print(f'Debug: Strategy1 - {sFaction.Strategy1} | {sFaction.StrategyStatus1}')
-		print(f'Debug: Strategy2 - {sFaction.Strategy2} | {sFaction.StrategyStatus2}')
-		if int(strat[0])==sFaction.Strategy1:	#find teh appropriate strat and show it as closed
-			sFaction.StrategyStatus1=0
+		print(f'Debug: Strategy1 - {actFaction.Strategy1} | {actFaction.StrategyStatus1}')
+		print(f'Debug: Strategy2 - {actFaction.Strategy2} | {actFaction.StrategyStatus2}')
+		#determine if the active faction use their first or second [4 player] strategy card and set to 0
+		if int(strat[0])==actFaction.Strategy1:	#find teh appropriate strat and show it as closed
+			actFaction.StrategyStatus1=0
 		else:
-			sFaction.StrategyStatus2=0
+			actFaction.StrategyStatus2=0
+		#create an event to end the strategic action of activestrategy 
+		#this finds teh most recent startturn event (e.g., whoevers turn just started)
+		startTurnEvent=session.scalars(select(Events).where(
+			Events.GameID==GID,
+			Events.EventType=="StartTurn",
+			Events.FactionName==stratFaction.FactionName
+			).order_by(Events.EventTime.desc())).first()
+		#create an end turn event for a secondary
+		endTurnEvent=Events(
+			GameID=GID,
+			EventType="EndTurn",
+			StrategicActionInfo=2,
+			FactionName=stratFaction.FactionName,
+			Round=gameBase.GameRound,
+			EventLink=startTurnEvent.EventID,
+			StrategyCardName=gameBase.GameStrategyName,
+			StrategyCardNumber=gameBase.GameStrategyNumber,
+			PhaseData=gameBase.GamePhase,
+			StateData=gameBase.GameState,
+			ScoreTotal=stratFaction.Score
+		)	
+		#add and flush
+		session.add(endTurnEvent)
+		session.flush()	#flush to get data
+		
+		#create the turn event as a secondary
+		session.add(Turns(
+			GameID=GID,
+			TurnType="Strategic",
+			StrategicActionInfo=2,
+			StrategyCardName=gameBase.GameStrategyName,
+			StrategyCardNumber=gameBase.GameStrategyNumber,
+			FactionName=stratFaction.FactionName,
+			Round=gameBase.GameRound,
+			TurnTime=getTimeDelta(endTurnEvent.EventTime,startTurnEvent.EventTime),
+			EventID=endTurnEvent.EventID))
+		#update teh turn link
+		startTurnEvent.EventLink=endTurnEvent.EventID	#update the linkage
+		#add the previous turn time from the faction's total time
+		stratFaction.TotalTime+=getTurnTime(GID,startTurnEvent, endTurnEvent,session)
+		#update activestrategy status for current
+		stratFaction.ActiveStrategy=0
+		#begin previous state change
+		
+		#find the previous state start event
+		previousStartStateEvent=session.scalars(select(Events).where(
+				Events.GameID==GID,
+				Events.EventType=="StartState",
+				Events.StateData==gameBase.GameState
+			).order_by(Events.EventID.desc())).first()
+
+	#createthe new ednstate event 
+		newEndStateEvent=Events(GameID=GID,
+			EventType="EndState",
+			FactionName=None,
+			PhaseData=gameBase.GamePhase,
+			StateData=gameBase.GameState, 
+			Round=gameBase.GameRound,
+			EventLink=previousStartStateEvent.EventID)
+	
+	#flush to create the added event
+		session.add(newEndStateEvent)
+		session.flush()
+
+	#link the previous event
+		newEndStateEvent.EventLink=previousStartStateEvent.EventID
+	
+	#create the new turn for ending a strategic action
+		session.add(
+					Turns(
+						GameID=GID,
+						Round=gameBase.GameRound,
+						TurnType="Strategic",
+						EventID=newEndStateEvent.EventID,
+						TurnTime=getTurnTime(GID,newEndStateEvent,previousStartStateEvent,session),
+						StrategicActionInfo=0,
+						StrategyCardName=gameBase.GameStrategyName,
+						StrategyCardNumber=gameBase.GameStrategyNumber
+					)
+		)
+
+		#update the basegame
+		gameBase.GameStrategyName=None
+		gameBase.GameStrategyNumber=None
+		gameBase.GameState="Active"
+		
+		#begin starting the next factions turn
+		nextActive=findNext(GID)
+		#update active status
+		nextActive.Active=1
+		actFaction.Active=0
+		#add the startturnevent
+		session.add(
+			Events(
+				GameID=GID,
+				FactionName=nextActive.FactionName,
+				EventType="StartTurn",
+				StateData=gameBase.GameState,
+				PhaseData=gameBase.GamePhase,
+				Round=gameBase.GameRound,
+				ScoreTotal=nextActive.Score
+			)
+		)
 		session.commit()
 	
-def endStrat(GID,faction):
-	#this function will create:
-	# an strategic endturn event for teh current faction
-	# a turn entry for teh current faction
-	# will update the faction.activestrategy to 0 for the active faction
-	#updated to create turn data for a strategic-primary/secondary-stratID turn
-	
+def transitionStrat(GID,currentFactionName,nextFactionName):
+	'''
+	 this function will create:
+	 an strategic endturn event for teh current faction
+	 a turn entry for teh current faction
+	 will update the faction.activestrategy to 0 for the active faction
+	 create a start turn eent for the new strat player
+	 update teh new player's srtategic action
+	updated to create turn data for a strategic-primary/secondary-stratID turn
+	'''
 	with Session() as session:
 		#this finds teh most recent startturn event (e.g., whoevers turn just started)
 		startEvent=session.scalars(select(Events).where(
 			Events.GameID==GID,
 			Events.EventType=="StartTurn",
-			Events.FactionName==faction
+			Events.FactionName==currentFactionName
 			).order_by(Events.EventTime.desc())).first()
 		#this is the basegame event used to extract and capture game info
 		gameBase=session.scalars(select(Games).where(Games.GameID==GID)).first()
 		#grab a base faction to capture faction info
-		currFaction=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.FactionName==faction )).first()
-		#determine if it's the primary or secondary action
-		if session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first().FactionName==faction:	#if the calling faction is the active faction, it's aprimary
+		currFaction=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.FactionName==currentFactionName )).first()
+		#determine if we're ending teh primary or secondary 
+		if session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first().FactionName==currentFactionName:	#if the calling faction is the active faction, it's aprimary
 			state=1	#primary strate
 		else:	#else it's a secondary
 			state=2	#secondary strat
 		#create the endturn event
 		newEnd=Events(
-		GameID=GID,
-		EventType="EndTurn",
-		StrategicActionInfo=state,
-		FactionName=faction,
-		Round=gameBase.GameRound,
-		EventLink=startEvent.EventID,
-		StrategyCardName=gameBase.GameStrategyName,
-		StrategyCardNumber=gameBase.GameStrategyNumber,
-		PhaseData=gameBase.GamePhase,
-		StateData=gameBase.GameState,
-		ScoreTotal=currFaction.Score)	
+			GameID=GID,
+			EventType="EndTurn",
+			StrategicActionInfo=state,
+			FactionName=currentFactionName,
+			Round=gameBase.GameRound,
+			EventLink=startEvent.EventID,
+			StrategyCardName=gameBase.GameStrategyName,
+			StrategyCardNumber=gameBase.GameStrategyNumber,
+			PhaseData=gameBase.GamePhase,
+			StateData=gameBase.GameState,
+			ScoreTotal=currFaction.Score
+		)
+			
 		#add and flush
 		session.add(newEnd)
 		session.flush()	#flush to get data
@@ -634,7 +729,7 @@ def endStrat(GID,faction):
 			StrategicActionInfo=state,
 			StrategyCardName=gameBase.GameStrategyName,
 			StrategyCardNumber=gameBase.GameStrategyNumber,
-			FactionName=faction,
+			FactionName=currentFactionName,
 			Round=gameBase.GameRound,
 			TurnTime=getTimeDelta(newEnd.EventTime,startEvent.EventTime),
 			EventID=newEnd.EventID))
@@ -644,6 +739,22 @@ def endStrat(GID,faction):
 		currFaction.TotalTime+=getTurnTime(GID,startEvent, newEnd,session)
 		#update activestrategy status for current
 		currFaction.ActiveStrategy=0
+		#Begin startig the next faction's turn
+		#note strategicactioninfo is always 2, since this is always a secondary action.  THe start of the strategy turn is captured as a generic start turn and is indicated 
+		newStartEvent=Events(
+			GameID=GID,
+			EventType="StartTurn",
+			FactionName=nextFactionName,
+			StrategicActionInfo=2,
+			Round=gameBase.GameRound,
+			PhaseData=gameBase.GamePhase,
+			StateData=gameBase.GameState,
+			StrategyCardNumber=int(gameBase.GameStrategyNumber),
+			StrategyCardName=strategyNameDict[int(gameBase.GameStrategyNumber)]
+			)
+		session.add(newStartEvent)
+		#set the active strategy status to 1
+		session.scalars(select(Factions).where(Factions.GameID==GID,Factions.FactionName==nextFactionName)).first().ActiveStrategy=1
 		session.commit()
 
 
@@ -802,6 +913,7 @@ def phaseChangeDetails(GID,newPhase):
 			session.commit()
 			
 	#stop game needs to initiate a pause event if it's not already paused
+
 def changeState(GID,state,faction=None):
 	'''
 	updates the state of the current game. called when changing pause-active-strategic
@@ -881,7 +993,7 @@ def getFactionAndStrat(GID):
 		actStrategyName=session.scalars(select(Games).where(Games.GameID==GID)).first().GameStrategyName
 	return(actFact,actStrategyNumber,actStrategyName)
 
-def changeStateStrat(GID,state,strat,faction):
+def changeStateToStrat(GID,state,strat,faction):
 	#this function changes teh state, ending the current state (gamestate "action") and starting a new state (state "strategic")
 	#this funtion is only called when changing the state from action to strategic
 	##inputs
