@@ -7,7 +7,7 @@
 <form class="form-inline" method="POST" action="{{url_for('action_phase')}}">
 	<div class="active_grid">
 		<div class="activeFactionLabel">Active Faction: </div>
-		<div class="activeFaction">{{activeFaction.FactionName}} - ({{activeUser}})</div>
+		<div class="activeFaction">{{activeFaction.FactionName}} - ({{activeUser.UserName}})</div>
 		<div class="activeButton1"><button type="submit" name="action" value="end" class="longButton">End</button></div>
 		<!-- logic dealing with strategy buttons-->
 		{% if activeFaction.StrategyStatus1<1 and activeFaction.StrategyStatus2<1 %}
