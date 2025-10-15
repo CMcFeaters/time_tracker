@@ -15,9 +15,9 @@
 
 <h2> Skill Issues </h2>
 {% for faction in factions %}
-	{% set hrs=(faction.TotalTime/3600) | int}
-	{% set mins=((faction.TotalTime%3600)/60) | int}
-	{% set secs=((faction.TotalTime%3600)%60) | int}
+	{% set hrs=(faction.TotalTime/3600) | int %}
+	{% set mins=((faction.TotalTime%3600)/60) | int %}
+	{% set secs=((faction.TotalTime%3600)%60) | int %}
 	
 <div class="win_box">
 <div class="faction"> {{ faction.FactionName }} </div>

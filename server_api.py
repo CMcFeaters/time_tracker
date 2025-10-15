@@ -58,9 +58,19 @@ def getSpeakerOrderByName(GID,factionName,names=False):
 				tFaction[(faction.TableOrder-bFact.TableOrder)%len(factions)]=faction
 	return tFaction		
 
+def activateGame(GID):
+	'''
+		given a GID, activates that game and commits
+	'''
+	with Session() as session:
+		#print(f'activating game: {GID} type: {type(GID)}')
+		session.scalars(select(Games).where(Games.GameID==GID)).first().Active=1
+		session.commit()
+	
+
 def findNextSpeakerOrderByName(GID,factionName):
 	'''
-		returns the next factionin object using table order starting with the identified factionname
+		returns the next faction name object using table order starting with the identified factionname
 	'''
 	#this will sort by speaker for display
 	
@@ -674,13 +684,70 @@ def closeStrat(GID):
 		)
 		session.commit()
 
-def getGameData(GID):
+def stopGame(GID):
+	'''
+	deactivate teh current game
+	
+	'''
+	with Session() as session:
+		session.scalars(select(Games).where(Games.GameID==GID)).first().Active=0
+		session.commit()
+	
+
+def deactivateGames():
+	'''
+	helper function that deactivates all games
+	and returns None
+	called from getActiveGame to handle more than 1 active game
+	'''
+	with Session() as session:
+		games=session.scalars(select(Games).where(Games.Active==1)).all()
+		for game in games:
+			game.Active=0
+		session.commit()
+		print('multiple acgive games')
+	return None
+
+def getActiveGame():
+	'''
+	returns the game object of the currently active game
+	if no games are active returns None
+	if multiple games are active, sets those games to innactive (0) and returns None
+	'''
+	
+	with Session() as session:
+		activeGame=session.scalars(select(Games).where(Games.Active==1)).all()
+		#dict that returns the following
+		# if there is 1 activeGame, return that gameID
+		# if there is 0 activeGames, return None
+		# if there are more than 1 active games, clear them and return None
+		returnDict={1:lambda:activeGame[0],0:lambda:None}
+		#change this to return the gameobject, then deriveGameID
+		return returnDict.get(len(activeGame),deactivateGames)()
+				 
+
+def getRawData():
+	'''
+	data capture fucntion, returns:
+		the list of all games (objects)
+		the list of all users (objects)
+	'''
+	with Session() as session:
+		#get a list of games
+		games=session.scalars(select(Games).order_by(Games.GameID)).all()
+		#get a list of 
+		users=session.scalars(select(Users).order_by(Users.UserName)).all()
+	return({'games':games,'users':users})
+def getGameData(GID=None):
 	'''
 	data capture function, returns:
-		the list of factions (objects)
+		the list of factions (objects) in initiative order
 		the active faction (object)
 		the active user (object)
-	in a {factions:factions,activeFaction:activeFaction,activeUser:activeUser} format
+		the activegame (object)
+		list of games (objects)
+		list of users (objects)
+	in a {factions:factions,activeFaction:activeFaction,activeUser:activeUser,game:activeGame,games:games,users:users} format
 	for the current Game
 	'''
 	with Session() as session:
@@ -693,12 +760,16 @@ def getGameData(GID):
 			Factions.GameID==GID,
 			Factions.Active==1
 		)).first()
-		#get active user
-		activeUser=session.scalars(select(Users).where(
+		#get active user only if there is an active faction
+		activeUser={None:lambda:None}.get(activeFaction,lambda:session.scalars(select(Users).where(
 		Users.UserID==activeFaction.UserID
+		)).first())()
+		#get active Game
+		gameBase=session.scalars(select(Games).where(
+			Games.Active==1
 		)).first()
-	print(f'Debug:  ActiveFaction: {activeFaction.FactionName} user: {activeUser.UserName}')
-	return {"factions":factions,"activeFaction":activeFaction,"activeUser":activeUser}
+
+	return {"factions":factions,"activeFaction":activeFaction,"activeUser":activeUser,'game':gameBase}
 
 def transitionStrat(GID,currentFactionName,nextFactionName):
 	'''
@@ -999,7 +1070,7 @@ def changeState(GID,state,faction=None):
 		session.commit()	#commit all changes
 
 def getFactionAndStrat(GID):
-	#returns teh acting faction and active strategy card number and name as a tuple (faction,number,name) for the current game during a strategic state
+	#returns teh acting strategy faction and active strategy card number and name as a tuple (faction,number,name) for the current game during a strategic state
 	with Session() as session:
 		actFact=session.scalars(select(Factions).where(
 			Factions.GameID==GID,
@@ -1206,17 +1277,35 @@ def endPhase(GID,gameover,session=Session()):
 
 #####################	Create Functions 	#################################
 
-def createNewGame(gameDate=gdate):
+def createNewGame(gameConfig,gameDate=gdate):
 	'''
 	creates a new game with a default date of today
+	adds factions to the faction table with the new game GID
+	assigns the first speaker
+	gameconfig is an array of tuples (factionname,(userID,speakerOrder))
 	returns the newly created gameID
 	'''
 	with Session() as session:
+		#create thew new game
 		newGame=Games(GameDate=gameDate)
 		session.add(newGame)
+		session.flush()
+		#add the factions to the game
+		for item in gameConfig:
+			#find the username of the faction id
+			uName=session.scalars(select(Users).where(Users.UserID==item[1][0])).first().UserName
+			#add the particular faction to the session, set the first person as speaker
+			session.add(Factions
+			   (FactionName=item[0],
+				UserID=item[1][0],
+				GameID=newGame.GameID,
+				TableOrder=item[1][1],
+				UserName=uName,
+				Speaker= {1:1}.get(item[1][1],0)
+				))
+		#add a speaker event if it's the actual speaker
+		{1:lambda:session.add(Events(GameID=newGame.GameID,EventType="Speaker",FactionName=item[0], Round=0))}.get(item[1][1],lambda:None)()
 		session.commit()
-		print ("GameID {}".format(newGame.GameID))
-	return newGame.GameID
 
 def createUsers():
 	#modify when we create a new user (deprecate)
@@ -1250,21 +1339,18 @@ def createNewUser(GID,uName):
 	with Session() as session:
 		session.add(Users(Username=uName))
 		session.commit()
-	
-def addFactions(GID, gameConfig):
+def getWinData(GID):
 	'''
-		adds users/factions to the game
-		gameConfig=('faction':(userID,tableOrder))
+	returns the winning faction and winning user objects in a format {wFaction:faction, wUser: user}
 	'''
 	with Session() as session:
-		for item in gameConfig:
-			uName=session.scalars(select(Users).where(Users.UserID==item[1][0])).first().UserName
-			session.add(Factions(FactionName=item[0],
-			UserID=item[1][0],
-			GameID=GID,
-			TableOrder=item[1][1],
-			UserName=uName))
-		session.commit()
+		gameBase=session.scalars(select(Games).where(Games.GameID==GID)).first()
+		wFaction=session.scalars(select(Factions).where(
+			Factions.GameID==GID,
+			Factions.FactionName==gameBase.GameWinner
+		)).first()
+		wUser=session.scalars(select(Users).where(Users.UserID==wFaction.UserID)).first()
+	return {'wFaction':wFaction,'wUser':wUser}
 
 def getTimeDelta(endTime,startTime):
 	#given T1 and T2, returns the delta in seconds as an int
