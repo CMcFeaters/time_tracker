@@ -20,7 +20,11 @@
 				<div class="strategyButton2"><button type="submit" name="action" value="Strategy2" class="strategyButton">{{activeFaction.StrategyName2}}</button></div>
 			{% endif %}
 		{% endif %}
-		<div class="combatCheckBox"><input type="checkbox" id="combat" name="combat" value="combat" class="largeCheckBox"><label for="combat">Combat</label></div>
+		<div class="combatCheckBox">
+			<label for="combat">Combat<br>
+				<input type="checkbox" id="combat" name="combat" value="combat" class="largeCheckBox">
+			</label>
+		</div>
 		<div class="undoButton"><button type="submit" name="action" value="undo" class="longButton">Undo</button></div>
 		<div class="faction_list">
 			<div> Init</div>
@@ -33,10 +37,7 @@
 							<div class="activeFactionList">{{ faction.Initiative }} </div>
 							<div class="activeFactionList">{{ faction.FactionName }} </div>
 							<!--<div class="activeFactionList">ACTIVE</div>-->
-						{% elif faction.FactionName==nextFaction.FactionName %}
-							<div class="nextFactionList">{{ faction.Initiative }} </div>
-							<div class="nextFactionList">{{ faction.FactionName }} </div>
-							<!--<div class="nextFactionList">NEXT</div>-->
+						
 						{% else %}
 							<div class="noPass">{{ faction.Initiative }} </div>
 							<div class="noPass">{{ faction.FactionName }} </div>

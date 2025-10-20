@@ -361,14 +361,10 @@ def action_phase():
 	#gather basic info needed for this function
 	GID=gameBase.GameID
 
-	gameDataDict=server_api.getGameData(GID)
-	print(f'2')
-	#list of factions
-	factions=gameDataDict["factions"]
+
 	#activeFaction
-	activeFaction=gameDataDict["activeFaction"]
-	#active user
-	activeUser=gameDataDict['activeUser']
+	activeFaction=server_api.getGameData(GID)["activeFaction"]
+
 
 	if request.method=='POST':
 
@@ -399,7 +395,18 @@ def action_phase():
 				server_api.changeStateToStrat(GID,"Strategic",activeFaction.Strategy2,activeFaction.FactionName)
 				return(phase_selector())
 				#return redirect(url_for("strategic_action",strategy="2"))	#on everyone passing we will go to the next phase
-
+	
+	#grabbing the updated data
+	gameDataDict=server_api.getGameData(GID)
+	#list of factions
+	factions=gameDataDict["factions"]
+	#activeFaction
+	activeFaction=gameDataDict["activeFaction"]
+	#active user
+	activeUser=gameDataDict['activeUser']
+	
+	'''
+	i'm removing this feature
 	nextFaction=""
 	i=1
 	while nextFaction=="":	
@@ -413,8 +420,8 @@ def action_phase():
 			nextFaction="None"
 		#for faction in factions:
 			#print(f'{faction.FactionName} total time: {faction.TotalTime}')
-			
-	return render_template("action_phase.html",factions=factions, activeUser=activeUser,activeFaction=activeFaction, nextFaction=nextFaction, cPhase="Action", flavor="Phase")
+	'''		
+	return render_template("action_phase.html",factions=factions, activeUser=activeUser,activeFaction=activeFaction, cPhase="Action", flavor="Phase")
 		
 
 @app.route("/agenda", methods=['GET','POST'])
@@ -554,7 +561,7 @@ def strategic_action():
 	factions=server_api.getFactions(GID)
 	#get thefaction and strategy that was selected
 	factstrat=server_api.getFactionAndStrat(GID)
-	print(f'Debug: Faction: {factstrat[0].FactionName} Strategy: {factstrat[1]}|{factstrat[2]}')
+#	print(f'Debug: Faction: {factstrat[0].FactionName} Strategy: {factstrat[1]}|{factstrat[2]}')
 	#get teh speakerorder of factions
 	sFactions=server_api.getSpeakerOrder(GID,True)	#line up the factions in the correct order
 
@@ -588,19 +595,22 @@ def strategy_phase():
 		else:
 			for faction in factions:
 				initDict[faction.FactionName]=(int(request.form.get(faction.FactionName)),9)	#else, add 9s to our init dict to represent garbage
-				
+		naaluFaction=request.form.get('initiative-0')
+		print(f'Naalu Faction: {naaluFaction}')
 		#check to see if the same init is picked multiple times
 		for init in inits:
 			if inits.count(init)>1:
 				print("Initiative %s selected multiple times"%init)
 				return redirect(url_for("strategy_phase"))
 		
-		server_api.assignStrat(GID,initDict)	#update initiatives
+		server_api.assignStrat(GID,initDict,naaluFaction)	#update initiatives
 		return phase_selector() #move to action phase
 	else:
 		factions=server_api.getGameData(GID)['factions']
 		sFactions=server_api.getSpeakerOrder(GID)
 		initiatives=range(1,9)
-		return render_template("strategy_phase.html",factions=factions, nFactions=len(factions),sFactions=sFactions, initiatives=initiatives, cPhase="Strategy", flavor="Phase")
+		naalu=[faction.FactionName for faction in factions].count("Naalu Collective")
+		print(f"Naalu: {naalu}")
+		return render_template("strategy_phase.html",factions=factions, nFactions=len(factions),sFactions=sFactions, initiatives=initiatives, cPhase="Strategy", flavor="Phase", naalu=naalu)
 
 			

@@ -2,6 +2,16 @@
 {% block content %}
 <form class="form-inline" method="POST" action="{{url_for('strategy_phase')}}">
 <div class="form-group">
+<div class="strategy_box">
+	{% if nFactions < 5  %}
+		<div class="bigButtonLabel">Strategy Card</div>
+	{% endif %}
+	<div class="bigButtonLabel">Strategy Card</div>
+	<div class="fNameLabel">Faction</div>
+	{% if naalu %}
+		<div class="naaluRadioLabel">Naalu 0</div>
+	{% endif %}
+</div>
 {% for faction in sFactions %}
 	<div class="strategy_box">
 		
@@ -13,12 +23,22 @@
 				{% endfor %}
 			</select>
 		{% endif %}
+		<div></div>
 			<select name= "{{faction.FactionName}}" class="bigButton">
 				{% for initiative in initiatives %}
 					<option value= "{{initiative}}" SELECTED>{{initiative}}</option>"
 				{% endfor %}
 			</select>
 		<div class="fName">{{ faction.FactionName }}</div> 
+		{% if naalu %}
+			<div class="naaluRadio">
+				{% if faction.FactionName=="Naalu Collective" %}
+					<input type="radio"  name="initiative-0" id='initiative-0' value="{{faction.FactionName}}" checked> 
+				{% else %}
+					<input type="radio"  name="initiative-0" id='initiative-0' value="{{faction.FactionName}}">
+				{% endif %} 
+			</div>
+		{% endif %}
     </div>
 {% endfor %}
 <div class="center">

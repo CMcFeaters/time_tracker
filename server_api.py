@@ -230,7 +230,7 @@ def deleteOldGame(GID):
 		session.commit()
 
 def getTurnTime(GID,startEvent,endEvent,session):
-	#returns the factions new total time
+	'''#returns the factions new total time
 	#GID - Game ID
 	#endEvent is the ending Event
 	#startEvent is the starting event
@@ -246,6 +246,7 @@ def getTurnTime(GID,startEvent,endEvent,session):
 		#factions most recent stop
 		#turnStop=session.scalars(select(Events).where(Events.GameID==GID,Events.EventLink==turnStart.EventID)).first()
 		#calculate the time between the two events
+	'''
 	#print(f'Debug:  Start: {startEvent.EventID} Stop: {endEvent.EventID}')
 	#print(f'Debug:  StartTime: {startEvent.EventTime} StoptTime: {endEvent.EventTime}')
 	
@@ -362,11 +363,15 @@ def undoEndTurn(GID,faction):
 		#check to see if we're trying to go into the previous round
 		#NOTE: If you want undo initiatives, this is where youd do it
 		elif baseGame.GameRound>prevEnd.Round:
-			#print(f'-previous round {prev_end.Round} less than current {curRound}')
-			return "None"
-		#chedk to see if we are doing a basic active-active undo
-		if ((prevEnd.StateData=="Active")&(baseGame.GameState=="Active")):
+			print(f'Undoing into the strategy phase')
+
+ 			#print(f'-previous round {prev_end.Round} less than current {curRound}')
+			#return "None"
+		#chedk to see if we are doing a basic active-active undo and ensure we are not looking at last rounds endturn
+		if ((prevEnd.StateData=="Active")&(baseGame.GameState=="Active")&(baseGame.GameRound==prevEnd.Round)):
+			print(f'prevEnd Phase Data: {prevEnd.PhaseData} for {prevEnd.EventID}')
 			#correct the start of the current turn
+
 			currStart=session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="StartTurn").order_by(Events.EventTime.desc())).first()
 			#find the previous start associated with the previous end
 			prevStart=session.scalars(select(Events).where(Events.GameID==GID,Events.EventLink==prevEnd.EventID)).first()
@@ -375,7 +380,7 @@ def undoEndTurn(GID,faction):
 			#subrtract the previous turn time from the faction's total time
 			prevFact.TotalTime-=getTurnTime(GID,prevStart, prevEnd,session)
 			#update the active faction
-			print(f'Were doing an undo end')
+			
 			session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Active==1)).first().Active=0
 			session.scalars(select(Factions).where(Factions.GameID==GID,Factions.FactionName==prevEnd.FactionName)).first().Active=1
 			#check to see if it was a pass
@@ -449,6 +454,43 @@ def undoEndTurn(GID,faction):
 			prevStart.EventLink=None
 			#correct the stratend turn entry
 			session.scalars(select(Turns).where(Turns.GameID==GID,Turns.EventID==stratEnd.EventID)).first().TurnType="Corrected-Strategic"
+		#see if we re trying to undo the first turn in a round/action phase and are we undoing into the strategy phase
+		elif (baseGame.GameRound>prevEnd.Round):
+			print(f'really udnoing into {prevEnd.PhaseData} phase')
+			#undoing into the strateg
+			#find the endphase event
+			phaseEnd=session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="EndPhase").order_by(Events.EventTime.desc())).first()
+			#correct the end phase event
+			phaseEnd.EventType="Corrected-"+phaseEnd.EventType
+			#correct the turn entry associatd with ending the phase
+			endPhaseTurn=session.scalars(select(Turns).where(Turns.GameID==GID,Turns.EventID==phaseEnd.EventID)).first()
+			endPhaseTurn.TurnType="Corrected-"+endPhaseTurn.TurnType
+			#correct prevEnd eventlink
+			phaseEnd.EventLink=None
+			#correct the start turn event
+			currentStartEvent=session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="StartTurn").order_by(Events.EventTime.desc())).first()
+			currentStartEvent.EventType="Corrected-"+currentStartEvent.EventType
+			#correct teh start phase event
+			currentStartPhaseEvent=session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="StartPhase",Events.EventLink==None)).first()
+			print(f'StartPhaseEventID: {currentStartPhaseEvent.EventID} and type: {currentStartPhaseEvent.EventType}')
+			currentStartPhaseEvent.EventType="Corrected-"+currentStartPhaseEvent.EventType
+			#cleanup each faction
+			for faction in session.scalars(select(Factions).where(Factions.GameID==GID)):
+				#clear intiatives
+				faction.Initiative=0
+				#clear strategy Status
+				faction.StrategyStatus1=0
+				faction.StrategyStatus2=0
+				#clear strategy card names
+				faction.StrategyName1=None
+				faction.StrategyName2=None
+				#clear strategycardnumbers
+				faction.Strategy1=9
+				faction.Strategy2=9
+			#set the basegame phase to strategy
+			baseGame.GamePhase="Strategy"
+
+
 		#any undo originating from the strategic action screen will call undoEndStrat
 		#do major gamestate updates
 		session.add(Events(GameID=GID,EventType="CorrectTurn", Round=baseGame.GameRound, StateData=baseGame.GameState, PhaseData=baseGame.GamePhase))	#create the event marking a turn correction ("CorrectTurn"
@@ -460,7 +502,7 @@ def undoEndTurn(GID,faction):
 def endTurn(GID,faction,tacticalActionInfo=0):
 	'''
 	
-	ends a faction's turn, if it's a pass(1), updates passing
+	ends/passes a faction's turns
 	start's the next faction's turn
 	
 	create the end/pass event
@@ -649,7 +691,7 @@ def closeStrat(GID):
 						Round=gameBase.GameRound,
 						TurnType="Strategic",
 						EventID=newEndStateEvent.EventID,
-						TurnTime=getTurnTime(GID,newEndStateEvent,previousStartStateEvent,session),
+						TurnTime=getTurnTime(GID,previousStartStateEvent,newEndStateEvent,session),
 						StrategicActionInfo=0,
 						StrategyCardName=gameBase.GameStrategyName,
 						StrategyCardNumber=gameBase.GameStrategyNumber
@@ -852,17 +894,20 @@ def transitionStrat(GID,currentFactionName,nextFactionName):
 		session.commit()
 
 
-def assignStrat(GID,stratDict):
+def assignStrat(GID,stratDict,naaluFaction=None):
 	'''
 		given a stratDict, assigns the strategy 1,2 to each faction
 		sets the strat status appropriately
 		calls the intiative fucntion
 	'''
+	naaluDict={naaluFaction:0}
 	with Session() as session:
 		for key in stratDict:
 			#get each faction
-			faction=session.scalars(select(Factions).
-			where(Factions.FactionName==key,Factions.GameID==GID)).first()
+			faction=session.scalars(select(Factions).where(
+				Factions.FactionName==key,
+		  		Factions.GameID==GID
+			)).first()
 			#assign stategy cards
 			faction.Strategy1=stratDict[key][0]
 			faction.Strategy2=stratDict[key][1]
@@ -876,7 +921,8 @@ def assignStrat(GID,stratDict):
 			else:
 				faction.StrategyStatus2=-1
 			#assign initiative
-			faction.Initiative=min(stratDict[key][0],stratDict[key][1])
+			#get the minimum initiative between the strategy cards.  if it's the naalufaction, set it to 0 using the naalu dict
+			faction.Initiative=naaluDict.get(faction.FactionName,min(stratDict[key][0],stratDict[key][1]))
 			#end the strategy phase, this commits
 		endPhase(GID,False,session)
 			
@@ -938,6 +984,8 @@ def startPhase(GID,session):
 	when starting the strategy phase, increments the gound round and creates start/stop round eventrs
 	when starting the status phase, clears initiatives and the pass status'
 	updates game table
+	creates a turn for the ending phase
+	if new round, creates a turn for the ending round
 	then it commits the session
 	'''
 	phase_order={"Setup":"Strategy","Strategy":"Action","Action":"Status","Status":"Agenda","Agenda":"Strategy"}
@@ -954,20 +1002,20 @@ def startPhase(GID,session):
 	strat_dict={"Strategy":1}
 	#create a defaultdict that only adds 1 when it's a strategy phase
 	roundAdder=defaultdict(lambda:0,strat_dict)
-	#add the start phase event for the new phase, note we're incrementing round+1 if we're entering the strategy phase
 	
-	session.add(Events(
-		GameID=GID,
-		EventType="StartPhase",
-		PhaseData=newPhase,
-		StateData=currentGame.GameState,
-		Round=currentGame.GameRound+roundAdder[newPhase]
-		))	#create the event
 	#determine which phase we are going to and perfomr the phase specific deatil actions
 	if newPhase=="Action":
 		#entering the action phase we need to automatically assign the active faction 
 		#and start their turn
 		#if we're entering the action phase, first initiative is the active faction
+		#add the start phase event for the new phase, note we're incrementing round+1 if we're entering the strategy phase
+		session.add(Events(
+			GameID=GID,
+			EventType="StartPhase",
+			PhaseData=newPhase,
+			StateData=currentGame.GameState,
+			Round=currentGame.GameRound+roundAdder[newPhase]
+		))	#create the event
 		activeFaction=session.scalars(select(Factions).where(Factions.GameID==GID).order_by(Factions.Initiative)).first()
 		newEvent=Events(GameID=GID,
 			EventType="StartTurn",
@@ -982,18 +1030,62 @@ def startPhase(GID,session):
 
 	elif newPhase=="Agenda":
 		#clear all the initiatives
+		#add the start phase event for the new phase, note we're incrementing round+1 if we're entering the strategy phase
+		session.add(Events(
+			GameID=GID,
+			EventType="StartPhase",
+			PhaseData=newPhase,
+			StateData=currentGame.GameState,
+			Round=currentGame.GameRound+roundAdder[newPhase]
+		))	#create the event
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
 		for row in factions:
 			row.Initiative=0 #set all inits to 0
 
 	elif newPhase=="Strategy":
 		#end old round, start new round, increment gameround
-		session.add(Events(GameID=GID,EventType="EndRound", Round=currentGame.GameRound))
+		#find the previous round start
+		prevStartRound=session.scalars(select(Events).where(Events.GameID==GID,Events.EventType=="StartRound").order_by(Events.EventID.desc())).first()
+		#cfeate an end turn event
+		endRound=Events(GameID=GID,EventType="EndRound", Round=currentGame.GameRound,EventLink=prevStartRound.EventID)
+		session.add(endRound)
+		#create a new start round event
 		session.add(Events(GameID=GID,EventType="StartRound", Round=currentGame.GameRound+1))
+		session.flush()
+		#setup the evvent id
+		
+		prevStartRound.EventLink=endRound.EventID
+		#create the new round turn
+		newRoundTurn=Turns(
+			GameID=GID,
+			Round=currentGame.GameRound,
+			TurnType="Round",
+			EventID=endRound.EventID,
+			TurnTime=getTurnTime(GID,prevStartRound,endRound,session)
+		)
+		#add
+		session.add(newRoundTurn)
+		#add the start phase event for the new phase, note we're incrementing round+1 if we're entering the strategy phase
+		session.add(Events(
+			GameID=GID,
+			EventType="StartPhase",
+			PhaseData=newPhase,
+			StateData=currentGame.GameState,
+			Round=currentGame.GameRound+roundAdder[newPhase]
+		))	#create the event
+		#increment round
 		currentGame.GameRound+=1		
 
 	elif newPhase=="Status":
 	#clear all of the "pass" and active status
+	#add the start phase event for the new phase, note we're incrementing round+1 if we're entering the strategy phase
+		session.add(Events(
+			GameID=GID,
+			EventType="StartPhase",
+			PhaseData=newPhase,
+			StateData=currentGame.GameState,
+			Round=currentGame.GameRound+roundAdder[newPhase]
+		))	#create the event
 		factions=session.scalars(select(Factions).where(Factions.GameID==GID)).all()
 		for row in factions:
 			row.Pass=0 #set all pass status to 0
@@ -1212,7 +1304,7 @@ def endPhase(GID,gameover,session=Session()):
 	startPhaseEvent.EventLink=stopPhaseEvent.EventID
 	
 	#create a new turn for ending the phase
-	newTurn=Turns(
+	newPhaseTurn=Turns(
 		GameID=GID,
 		TurnTime=getTurnTime(GID,startPhaseEvent,stopPhaseEvent,session),
 		TurnType="Phase",
@@ -1220,7 +1312,7 @@ def endPhase(GID,gameover,session=Session()):
 		Round=currentGame.GameRound,
 		EventID=stopPhaseEvent.EventID
 	)
-
+	session.add(newPhaseTurn)
 	#if we are ending the game, we don't want to call "startPhase"
 	if gameover:
 		

@@ -2,6 +2,27 @@
 items used for the page header section
 */
 /*text fonts*/
+
+:root {
+    --text-color: #E0E0E0;
+    --background-color: #1a1a1a;
+    --accent-color: #888888;
+	--inlay-color: #444444;
+	--secondary-text: #888888;
+	--highlight-color: #3e5641;
+	--checked-color: #004d61;
+  }
+
+button {
+  background-color: var(--accent-color);
+  color: var(--text-color);
+}
+
+body {
+  color: var(--text-color);
+  background-color: var(--background-color);
+}
+
 .bigBoldText{
 	font-weight: bold;
 	font-size: 20px;
@@ -18,6 +39,11 @@ items used for the page header section
 	width:150px;
 	height:75px;
 	font-size: 1.5em;
+}
+
+select {
+	background-color: var(--accent-color);
+  	color: var(--text-color);
 }
 
 .bigButton{
@@ -108,7 +134,7 @@ items used for the page header section
 
 .strategic_action .pName{
 	justify-self: end;
-	color: silver;
+	color: var(--secondary-text);
 }
 
 .strategic_action .speakerButton{
@@ -206,7 +232,9 @@ items used for the page header section
 
 /*Stragtegy phase section*/
 .strategy_box{
-	display: flex; 		
+	display: flex;
+	width:100%;
+	
 	align-items: center;
 	justify-items: start;
 	justify-content: center;
@@ -221,8 +249,57 @@ items used for the page header section
 	font-size: 2em;
 }
 
+.strategy_box .bigButtonLabel{
+	width: 100px;
+	text-align: center;
+}
+
 .strategy_box .fName{
 	width: 300px;
+}
+
+.strategy_box .fNameLabel{
+	width: 300px;
+	text-align: start;
+}
+
+.strategy_box .naaluRadio{
+	width: 100px;
+	text-align: center;
+}
+
+.strategy_box .naaluRadioLabel{
+	width: 100px;
+	text-align: center;
+}
+
+
+input[type="radio"]{
+	appearance:none;
+	width: 30px;
+	height: 30px;
+	border: 0.1rem solid var(--text-color);
+    border-radius: 50%;
+	background-color: var(--accent-color);
+}
+input[type="radio"]:checked{
+
+	background-color: var(--checked-color);
+}
+
+
+
+input[type="checkbox"]{
+	appearance:none;
+	width: 30px;
+	height: 30px;
+	border: 0.1rem solid var(--text-color);
+    
+	background-color: var(--accent-color);
+}
+input[type="checkbox"]:checked{
+
+	background-color: var(--checked-color);
 }
 
 /*status phase section*/
@@ -257,16 +334,12 @@ items used for the page header section
 
 
 .pass{
-	color: silver;
+	color: var(--secondary-text);
 }
 
 .activeFactionList{
-	background: chartreuse;
-	color: black;
-}
-
-.nextFactionList{
-	background: aquamarine;
+	background: var(--highlight-color);
+	/*color: black;*/
 }
 
 
@@ -319,7 +392,7 @@ items used for the page header section
 	
 	grid-area:e;
 	
-	justify-self: center;
+	justify-self: start;
 }
 
 .active_grid .activeFaction{
@@ -340,6 +413,17 @@ items used for the page header section
 	grid-area:z;
 	justify-self: center;
 	align-items:center;
+	gap:10px;
+}
+
+.active_grid label{
+	display: block;
+	gap:10px;
+	justify-self: center;
+	align-items:center;
+	text-align: center;
+	text-justify: center;
+	font-size: 1.5em;
 }
 
 .active_grid .activeButton2{
@@ -369,25 +453,6 @@ items used for the page header section
 	gap: 10px;
 }
 
-/*.footer_box{
-	display:grid;
-	grid-template-columns: repeat(6,108px);
-	
-	grid-gap: 8px;
-}*/
-
-/*
-.footer_box div{
-	width: 50px;
-	background-color: grey;
-	color:white;
-
-	
-}
-*/
-/*WHY ARE WE JUMPING TO ACTION WHEN IT SHOULD BE STRAT*/
-
-
 /*bottom area individual selection box*/
 .footer_sections{
 	display:grid;
@@ -412,8 +477,8 @@ items used for the page header section
 	justify-items: center;
 	align-items: center;
 	justify-content: center;
-	background-color: grey;
-	color:white;
+	background-color: var(--inlay-color);
+	/*color:white;*/
 	grid-template-areas:
 	"a a"
 	"a a"
