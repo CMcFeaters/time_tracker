@@ -129,8 +129,6 @@ class Turns(Base):
 	EventID: Mapped[Optional[int]]=mapped_column(ForeignKey("events.EventID"))	#the event ID of the closing event
 	#data
 	TurnTime: Mapped[Optional[int]]	#How long was the turn
-	TurnNumber: Mapped[Optional[int]]	#the total turn number, i'm not sure if i want to collect this yet
-	TurnNumberRound: Mapped[Optional[int]]	#how many turns for a given round, i'm not sure if i want to collect this yet
 	Round: Mapped[Optional[int]]	#the round the event occured in
 	TurnType: Mapped[Optional[str]]=mapped_column(String(30))	#log the turn type - Tactical,Strategic, round,phase,game,state
 	StrategyCardName: Mapped[Optional[str]]=mapped_column(String(30))	#if it's a strategic turn type, cpatures the strategic card name
