@@ -128,6 +128,7 @@ class Turns(Base):
 	FactionName: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))	#the ID of the faction, if applicable
 	EventID: Mapped[Optional[int]]=mapped_column(ForeignKey("events.EventID"))	#the event ID of the closing event
 	#data
+	TurnTimeStamp: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())
 	TurnTime: Mapped[Optional[int]]	#How long was the turn
 	Round: Mapped[Optional[int]]	#the round the event occured in
 	TurnType: Mapped[Optional[str]]=mapped_column(String(30))	#log the turn type - Tactical,Strategic, round,phase,game,state

@@ -2,8 +2,6 @@ from TI_TimeTracker_DB_api import engine, Games, Users, Factions, Events, create
 from sqlalchemy import select, or_, and_, delete, update, insert
 from sqlalchemy.orm import sessionmaker
 import datetime as dt
-import bisect
-from time import sleep
 import sys
 
 Session=sessionmaker(engine)
@@ -22,6 +20,22 @@ def addTurnTime():
 			turn.TurnTime=timeDelta
 			#not committing?
 		session.commit()
+
+def addTurnTimeStamp():
+	'''
+	uses the eventiD in turns to find teh timestamp of the closing event.
+	sets the turntimestamp to the  closing event eventtime 
+	'''
+	with Session() as session:
+		#function to return the eventTime object
+		getEventTime=lambda eventID: session.scalars(select(Events).where(Events.EventID==eventID)).first().EventTime
+		#get all the turns
+		turns=session.scalars(select(Turns)).all()
+		#for each turn, set the timestamp
+		for turn in turns:
+			turn.TurnTimeStamp=getEventTime(turn.EventID)
+		session.commit()
+
 
 def timeConvert():
 	baseT=dt.datetime(1970,1,1)
@@ -312,7 +326,7 @@ if __name__=="__main__":
 		safemode="fuck you"
 	#just a little helper function
 	if safemode=="1":
-		removePassTurn()
+		addTurnTimeStamp()
 	else:
 		#roundMaker(1)
 		print("safe mode enabled")
