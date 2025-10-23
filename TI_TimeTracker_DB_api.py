@@ -25,12 +25,11 @@ class Games(Base):
 	Active: Mapped[bool] =mapped_column(default=0)	#if active game: 1
 	GameStrategyName: Mapped[Optional[str]]=mapped_column(String(30))	#when a strategy phase is active, identifies the current strat card name played
 	GameStrategyNumber: Mapped[Optional[str]]=mapped_column(String(30))	#when a strategy phase is active, identifies the current strat card number played
-	#relationship
+	GameRotation: Mapped[int]=mapped_column(default=0)	#the current rotation number in the action phase
+	#relationships
 	GameFactions: Mapped[List["Factions"]]=relationship('Factions',back_populates="GamePlayed")
 	GameEvents: Mapped[List["Events"]]=relationship('Events',back_populates="Game")	
-	#you need to remove this backlink to finish removing combat
-	GameCombats: Mapped[List["Combats"]]=relationship('Combats',back_populates="Game")	#backlink to combats table
-	GameTurns: Mapped[List["Turns"]]=relationship('Turns',back_populates="Game")	#backlink to combats table
+	GameTurns: Mapped[List["Turns"]]=relationship('Turns',back_populates="Game")	#backlink to turns table
 
 	
 class Users(Base):
@@ -89,12 +88,13 @@ class Events(Base):
 	StateData: Mapped[Optional[str]]=mapped_column(String(30))
 	Round: Mapped[Optional[int]]	#the round the event occured in
 	EventLink: Mapped[Optional[int]]	#This is used ot link to start events and end events
-	StrategyCardNumber: Mapped[Optional[str]]=mapped_column(String(30))	#captures the strategy card number for strategic action related cards
+	StrategyCardNumber: Mapped[Optional[str]]=mapped_column(String(30))	#captures the strategy card number for strategic action related cards (need to convert to in)
 	StrategyCardName: Mapped[Optional[str]]=mapped_column(String(30))	#captures the strategy card name for strategic actions
 	TacticalActionInfo: Mapped[Optional[int]]	#captures the strategic action type: normal (0), combat(1), pass(2)
-	StrategicActionInfo: Mapped[Optional[int]]	#captures teh primary/secondary of a strategic action
+	StrategicActionInfo: Mapped[Optional[int]]	#captures teh primary(1)/secondary(2) of a strategic action
 	ScoreTotal: Mapped[Optional[int]]	#when a score event occurs, the total score
 	Score: Mapped[Optional[int]]	#when a score occurs, the direction (+/-1)
+	Rotation: Mapped[Optional[int]]	#tracks which rotation the event occured during
 	#relationships
 	Game: Mapped["Games"]=relationship('Games',back_populates="GameEvents")
 	Faction: Mapped["Factions"]=relationship('Factions',back_populates="FactionActions")
@@ -137,6 +137,7 @@ class Turns(Base):
 	TacticalActionInfo: Mapped[Optional[int]]	#if it's a tactical action turn, captures if it's normal (0), combat(1), or a pass(2)
 	PhaseInfo: Mapped[Optional[str]]=mapped_column(String(30))	#if it's a phase turn, captures the phase name
 	StrategicActionInfo: Mapped[Optional[int]] #if a strategic Action, captures if its a primary (1) or secndary (2)
+	Rotation: Mapped[Optional[int]]	#tracks which rotation the turn occured during
 
 	#relationships
 	Game: Mapped["Games"]=relationship("Games",back_populates="GameTurns")
@@ -155,29 +156,6 @@ class Turns(Base):
 	#turninfo - what other info do we need to know?  (phase - status/strategy/tactic/agenda, strategic - what strategy card was it, tactical - normal or combat, status - active/stratgic/pause)
 	#misc data - any other data we need (strategy - primary/secondary,state - what strategy cards was it)
 	
-
-	
-
-#you need to remove this table from the DB to finish removing combats
-class Combats(Base):
-	__tablename__="combats"
-	#keys
-	CombatID: Mapped[int] = mapped_column(primary_key=True)
-	GameID: Mapped[int] = mapped_column(ForeignKey("games.GameID"))
-	Aggressor: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
-	Defender: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
-	Winner: Mapped[Optional[str]]=mapped_column(ForeignKey("factions.FactionName"))
-	Active: Mapped[bool] =mapped_column(default=1)	#combat status, only 1 active combat at a time
-	#data
-	StartTime: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())
-	StopTime: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True),server_default=func.now())
-
-	#relationships
-	Game: Mapped["Games"]=relationship(back_populates="GameCombats")
-	AggressorFaction: Mapped["Factions"]=relationship("Factions",foreign_keys=[Aggressor])
-	DefenderFaction: Mapped["Factions"]=relationship("Factions",foreign_keys=[Defender])
-	WinnerFaction: Mapped["Factions"]=relationship("Factions",foreign_keys=[Winner])
-
 
 def clearAll():
 	Base.metadata.drop_all(engine)
