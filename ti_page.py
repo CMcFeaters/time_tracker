@@ -1,7 +1,7 @@
 from flask import Flask, render_template, redirect, url_for,request
 import server_api
 from sqlalchemy import select, and_
-from TI_TimeTracker_DB_api import Games, Users, Factions, Events, Combats, Turns
+from TI_TimeTracker_DB_api import Games, Users, Factions, Events, Turns
 import datetime
 
 #config=dotenv_values(".env")
