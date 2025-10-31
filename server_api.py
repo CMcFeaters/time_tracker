@@ -676,7 +676,9 @@ def closeStrat(GID):
 			FactionName=stratFaction.FactionName,
 			Round=gameBase.GameRound,
 			TurnTime=getTimeDelta(endTurnEvent.EventTime,startTurnEvent.EventTime),
-			EventID=endTurnEvent.EventID))
+			EventID=endTurnEvent.EventID,
+			Rotation=gameBase.GameRotation
+			))
 		#update teh turn link
 		startTurnEvent.EventLink=endTurnEvent.EventID	#update the linkage
 		#add the previous turn time from the faction's total time

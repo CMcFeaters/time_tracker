@@ -139,6 +139,7 @@ class Turns(Base):
 	StrategicActionInfo: Mapped[Optional[int]] #if a strategic Action, captures if its a primary (1) or secndary (2)
 	Rotation: Mapped[Optional[int]]	#tracks which rotation the turn occured during
 
+
 	#relationships
 	Game: Mapped["Games"]=relationship("Games",back_populates="GameTurns")
 	Faction: Mapped["Factions"]=relationship("Factions",back_populates="FactionTurns")
