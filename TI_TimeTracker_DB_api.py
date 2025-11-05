@@ -1,10 +1,11 @@
 
 import datetime
 from typing import Optional, List
-from sqlalchemy import String, ForeignKey, create_engine, DateTime
+from sqlalchemy import String, ForeignKey, create_engine, DateTime, DECIMAL, Computed
 from sqlalchemy.orm import declarative_base, relationship, mapped_column, Mapped
 from sqlalchemy.schema import PrimaryKeyConstraint
 from sqlalchemy.sql import func
+from sqlalchemy.ext.hybrid import hybrid_property
 from dotenv import dotenv_values
 #define the MARIADB engine
 
@@ -138,6 +139,31 @@ class Turns(Base):
 	PhaseInfo: Mapped[Optional[str]]=mapped_column(String(30))	#if it's a phase turn, captures the phase name
 	StrategicActionInfo: Mapped[Optional[int]] #if a strategic Action, captures if its a primary (1) or secndary (2)
 	Rotation: Mapped[Optional[int]]	#tracks which rotation the turn occured during
+	RoundRotation:Mapped[Optional[float]] = mapped_column(
+        DECIMAL(4, 2),
+        Computed("CASE WHEN Rotation IS NOT NULL AND Round IS NOT NULL THEN ROUND + Rotation / 100.0 ELSE NULL END"),
+        nullable=True
+    )	#auto-compute round.rotation/100 for mapping
+
+	'''
+	#hybrid section
+	@hybrid_property
+	def RoundRotation(self) -> Optional[float]:
+		if (self.Round is not None and self.Rotation is not None):
+			return self.Round + self.Rotation / 100.0
+		return None
+	
+	@RoundRotation.setter
+	def RoundRotation(self, value: Optional[float]):
+		if value is None:
+			self.Rotation = None
+			self.Round = None
+		else:
+			self.Round = int(value)
+			self.Rotation = int(round((value - self.Rotation) * 100)) 
+
+	#@RoundRotation.expression
+	'''
 
 
 	#relationships
@@ -149,8 +175,6 @@ class Turns(Base):
 	#gameid - game indicator
 	#eventID - The id of the closing event
 	#facitoname - link to faction making the turn, if applicable
-	#turnNumber - what number was this
-	#turnNumberRound - what number was this
 	#turn time - how long (in seconds) did this turn take
 	#Round - what round did this occur during
 	#turntype - what kind of turn was it (phase, strategic, tactical, status)
