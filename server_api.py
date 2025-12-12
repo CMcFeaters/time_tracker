@@ -994,7 +994,7 @@ def adjustPoints(GID,faction,points):
 		res=session.scalars(select(Factions).where(Factions.FactionName==faction,Factions.GameID==GID)).first()
 		res.Score+=points
 		session.flush()
-		session.add(Events(GameID=GID,EventType="Score",FactionName=faction,Score=points,ScoreTotal= res.Score,Round=gameBase.GameRound()))
+		session.add(Events(GameID=GID,EventType="Score",FactionName=faction,Score=points,ScoreTotal= res.Score,Round=gameBase.GameRound))
 		session.commit()
 			
 def gameStop(GID,faction):
