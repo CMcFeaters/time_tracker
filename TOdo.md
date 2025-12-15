@@ -1,3 +1,15 @@
+(DONE)Add all new factions to selection pool
+Add abilty to "shelve" games and shelve all old games
+    (done) add "hidden" true/false
+    (done) when displaying games if "Shelve" don't show it
+Add Ral Nel ability to "unpass"
+    This needs to be a stored bit in the game (ral Nel)
+    if ral nel, every time there is a final pass, you need to ask if ral nel is doing their hero
+    once they've done it, set ral nel to 0
+    if ral nel is in the game, set ral nel to 1 at game creation
+    need to ensure ralnel is easily put back into the timing rotation
+
+
 (general)
 	Round needs to start on strategy start and end on status completion
     add start phase for agenda, strat, status, etc.

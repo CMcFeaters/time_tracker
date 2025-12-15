@@ -27,6 +27,9 @@ class Games(Base):
 	GameStrategyName: Mapped[Optional[str]]=mapped_column(String(30))	#when a strategy phase is active, identifies the current strat card name played
 	GameStrategyNumber: Mapped[Optional[str]]=mapped_column(String(30))	#when a strategy phase is active, identifies the current strat card number played
 	GameRotation: Mapped[int]=mapped_column(default=0)	#the current rotation number in the action phase
+	Hidden: Mapped[bool] =mapped_column(default=0)	#hides teh game in the selection menu if set to 1
+	Naalu: Mapped[bool] =mapped_column(default=0)	#indicates if naalu is in the game
+	RalNel: Mapped[bool] =mapped_column(default=0)	#Indicates if ralNel hero is available
 	#relationships
 	GameFactions: Mapped[List["Factions"]]=relationship('Factions',back_populates="GamePlayed")
 	GameEvents: Mapped[List["Events"]]=relationship('Events',back_populates="Game")	

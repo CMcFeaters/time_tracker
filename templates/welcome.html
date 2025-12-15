@@ -10,11 +10,13 @@
 		<div>Phase</div>
 
 		{% for game in games %}
-			<div><button type="submit" name="gameSelect" value='{{game.GameID}}' class="speakerButton">Select</button></div>
-			<div class="game"> {{ game.GameID }} </div>
-			<div class="game"> {{ game.GameDate }} </div>
-			<div class="game"> {{ game.GameWinner }} </div>
-			<div class="game"> {{ game.GamePhase }} </div>
+			{% if game.Hidden==0%}
+				<div><button type="submit" name="gameSelect" value='{{game.GameID}}' class="speakerButton">Select</button></div>
+				<div class="game"> {{ game.GameID }} </div>
+				<div class="game"> {{ game.GameDate }} </div>
+				<div class="game"> {{ game.GameWinner }} </div>
+				<div class="game"> {{ game.GamePhase }} </div>
+			{% endif %}
 			
 		{% endfor %}
 	</div>

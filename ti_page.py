@@ -136,9 +136,9 @@ def create_game():
 	else:
 		players=[user.UserName for user in server_api.getRawData()['users']]
 		players.append('NA')
-		faction_choices=['Arborec','Argent Flight','Barony of Letnev','Clan of Saar','Council Keleres','Embers of Muaat','Emirates of Hacan','Empyrean','Federation of Sol',
-		'Ghosts of Creuss','L1Z1X Mindnet','Mahact Gene-Sorcerers','Mentak Coalition','Naalu Collective','Naaz-Rokha Alliance','Nekro Virus','Nomad','Sardakk N’orr',
-		'Titans of Ul','Universities of Jol-Nar','Vuil Raith Cabal','Winnu','Xxcha Kingdom','Yin Brotherhood','Yssaril Tribes']
+		faction_choices=['Arborec','Argent Flight','Barony of Letnev','Clan of Saar','Council Keleres','Crimson Rebellion','Deepwrought Scholarate','Embers of Muaat','Emirates of Hacan','Empyrean','Federation of Sol',
+		'Firmament-Obsidian','Ghosts of Creuss','Last Bastion','L1Z1X Mindnet','Mahact Gene-Sorcerers','Mentak Coalition','Naalu Collective','Naaz-Rokha Alliance','Nekro Virus','Nomad','Sardakk N’orr',
+		'Ral Nel Consortium','Titans of Ul','Universities of Jol-Nar','Vuil Raith Cabal','Winnu','Xxcha Kingdom','Yin Brotherhood','Yssaril Tribes']
 		return render_template("create_game.html",players=players,faction_choices=faction_choices,cPhase="Welcome")
 
 @app.route("/add_player_page",methods=['GET','POST'])

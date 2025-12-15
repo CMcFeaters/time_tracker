@@ -1,4 +1,4 @@
-from TI_TimeTracker_DB_api import engine, Games, Users, Factions, Events, createNew, clearAll, Combats, Base, Turns
+from TI_TimeTracker_DB_api import engine, Games, Users, Factions, Events, createNew, clearAll, Base, Turns
 from sqlalchemy import select, or_, and_, delete, update, insert
 from sqlalchemy.orm import sessionmaker
 import datetime as dt
@@ -36,6 +36,15 @@ def addTurnTimeStamp():
 			turn.TurnTimeStamp=getEventTime(turn.EventID)
 		session.commit()
 
+
+def gameHide():
+	'''
+	set each games hidden status to 0'''
+	with Session() as session:
+		games=session.scalars(select(Games)).all()
+		for game in games:
+			game.Hidden=0
+		session.commit()
 
 def timeConvert():
 	baseT=dt.datetime(1970,1,1)
@@ -326,7 +335,7 @@ if __name__=="__main__":
 		safemode="fuck you"
 	#just a little helper function
 	if safemode=="1":
-		addTurnTimeStamp()
+		gameHide()
 	else:
 		#roundMaker(1)
 		print("safe mode enabled")

@@ -934,7 +934,7 @@ def assignStrat(GID,stratDict,naaluFaction=None):
 		sets the strat status appropriately
 		calls the intiative fucntion
 	'''
-	naaluDict={naaluFaction:0}
+	naaluDict={naaluFaction:0}	#assigns initiative 0 to whoever naalu faction is, used below
 	with Session() as session:
 		for key in stratDict:
 			#get each faction
@@ -1447,6 +1447,11 @@ def createNewGame(gameConfig,gameDate=gdate):
 				UserName=uName,
 				Speaker= {1:1}.get(item[1][1],0)
 				))
+			#replace with lambda functions
+			if item[0]=="Naalu Collective":
+				newGame.Naalu=1
+			if item[0]=="Ral Nel Consortium":
+				newGame.RalNel=1
 		#add a speaker event if it's the actual speaker
 		{1:lambda:session.add(Events(GameID=newGame.GameID,EventType="Speaker",FactionName=item[0], Round=0))}.get(item[1][1],lambda:None)()
 		session.commit()
