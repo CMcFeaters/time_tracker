@@ -82,10 +82,27 @@ def findNextSpeakerOrderByName(GID,factionName):
 		nextFaction=tFaction[(tFaction.index(bFact.FactionName)+1)%len(tFaction)]
 	return nextFaction		
 
+def allPassCheck(GID):
+	#when a faction passes, checks to see if all other factions have passed
+	#return 
+	# 1: if the active faction is the only faction that hasn't passed returns true
+	# 0: if any other faction hasn't passed
+	#note at this point the active faction is the passing faction and would not be at a pass status
+	with Session() as session:
+		activeFactions=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Pass==0)).all()
+		#more than 1 faction remains
+		if len(activeFactions)>1:
+			allPass=0
+		else:
+			#there is only 1 remaining faction (the active faction)
+			allPass=1
+	return allPass
+
 def findNext(GID,fwd_bwd=1,passed=0):
 	#returns the faction object of the next faction
 	#GID - gameid
 	#Fwd_bwd - 1 if the next next, -1 if the previous faction
+	#passed = 0 if end turn, 1 if pass
 	with Session() as session:
 		#activeFactions contains the list of factions that haven't passed
 		activeFactions=session.scalars(select(Factions).where(Factions.GameID==GID,Factions.Pass==0).order_by(Factions.Initiative)).all()
@@ -607,6 +624,12 @@ def endTurn(GID,faction,tacticalActionInfo=0):
 		elif nextFaction is None:
 
 			#print("Ending phase due to no players left")
+			print("ralnel check")
+			#RAL NEL HERE
+			#need to figure out how to give the player an option to choose what to do
+			#if yes, set ral nel status to unpass and ral nel bit to 0
+			#if no, endphase
+			#if no ralnel, endphase
 			print("ending phase")
 			endPhase(GID,False,session)
 			print("phase ended")
@@ -809,7 +832,8 @@ def getRawData():
 		games=session.scalars(select(Games).order_by(Games.GameID)).all()
 		#get a list of 
 		users=session.scalars(select(Users).order_by(Users.UserName)).all()
-	return({'games':games,'users':users})
+		usersbyid=session.scalars(select(Users).order_by(Users.UserID)).all()
+	return({'games':games,'users':users,'usersbyid':usersbyid})
 def getGameData(GID=None):
 	'''
 	data capture function, returns:

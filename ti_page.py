@@ -100,6 +100,7 @@ def create_game():
 			else append to our two arrays
 			results in an array of players and an array of factions
 			'''
+			#this isn't working, we're getting some bad data
 			player=request.form.get("user"+str(entry))
 			faction=request.form.get("faction"+str(entry))
 			if player!="NA":
@@ -114,13 +115,15 @@ def create_game():
 					print(f'{faction} has multiple entries')
 					return(redirect(url_for('create_game')))
 		#get the list of user objects
-		users=server_api.getRawData()['users']
+		users=server_api.getRawData()['usersbyid']
 		#generate a list of userids for the  names in players
-		playerIDs=[user.UserID  for user in users  for player in players if user.UserName==player]
+		playerIDs=[user.UserID  for player in players for user in users if user.UserName==player]
+
 		#get the player IDS from teh player names
 		#playerIDs=[server_api.Session().scalars(select(Users.UserID).where(Users.UserName==player)).first() for player in players]
 		#print(players)
 		#print(playerIDs)
+		#print(factions)
 		#put it all into a single array of tuples (faction,(userID,order))
 		gameConfig=[(factions[i],(playerIDs[i],i+1)) for i in range(len(players))]
 		print(gameConfig)
@@ -367,18 +370,27 @@ def action_phase():
 
 
 	if request.method=='POST':
-
+		#a post has occured (e.g., end or undo, or pass, or strategic card)
 		if(request.form.get('action')):
+			#an end was hit
 			if(request.form['action']=="end"):
+				#check to see if there was combat and execute teh correct end turn event
 				if (request.form.get('combat')):
 					print(f"Debug Combat: {request.form['combat']} detected")
 					server_api.endTurn(GID,activeFaction.FactionName,2)
 				else:
 					print(f"Debug: No combat detected {request.form.get('combat')}")
 					server_api.endTurn(GID,activeFaction.FactionName,0)
+			#A PASS was selected
 			elif(request.form['action']=="pass"):
+				allPass=server_api.allPassCheck(GID)
+				if(allPass==1):
+					print("Looks like everyone passed")
+				else:
+					print("Still some people left")
 				server_api.endTurn(GID,activeFaction.FactionName,1)
 				return(phase_selector())	#on everyone passing we will go to the next phase
+			#an undo was selected
 			elif(request.form['action']=="undo"):
 				print(f'*******************Undoing turn for {activeFaction.FactionName}')
 				server_api.undoEndTurn(GID,activeFaction.FactionName)
